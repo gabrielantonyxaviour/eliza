@@ -68,6 +68,7 @@ export function parseArguments(): Arguments {
 export function loadCharacters(charactersArg: string): Character[] {
     const characterPaths = charactersArg?.split(",").map((path) => path.trim());
     const loadedCharacters = [];
+   console.log(charactersArg)
     if (characterPaths?.length > 0) {
         for (const path of characterPaths) {
             try {
