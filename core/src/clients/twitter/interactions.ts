@@ -271,11 +271,16 @@ export class TwitterInteractionClient extends ClientBase {
             template: shouldRespondTemplate,
         });
 
-        const shouldRespond = await generateShouldRespond({
-            runtime: this.runtime,
-            context: shouldRespondContext,
-            modelClass: ModelClass.SMALL,
-        });
+        let shouldRespond: "RESPOND" | "IGNORE" | "STOP" | null;
+        const solanaAddressRegex = /\b[A-HJ-NP-Za-km-z1-9]{32,44}\b/;
+        if (!solanaAddressRegex.test((state.currentPost as string) || ""))
+            shouldRespond = null;
+        else
+            shouldRespond = await generateShouldRespond({
+                runtime: this.runtime,
+                context: shouldRespondContext,
+                modelClass: ModelClass.SMALL,
+            });
 
         if (!shouldRespond) {
             console.log("Not responding to message");
