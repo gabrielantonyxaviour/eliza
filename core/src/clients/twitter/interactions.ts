@@ -273,7 +273,7 @@ export class TwitterInteractionClient extends ClientBase {
 
         let shouldRespond: "RESPOND" | "IGNORE" | "STOP" | null;
         const solanaAddressRegex = /\b[A-HJ-NP-Za-km-z1-9]{32,44}\b/;
-        if (!solanaAddressRegex.test((state.currentPost as string) || ""))
+        if (solanaAddressRegex.test((state.currentPost as string) || ""))
             shouldRespond = null;
         else
             shouldRespond = await generateShouldRespond({
