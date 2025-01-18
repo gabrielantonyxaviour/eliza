@@ -2,7 +2,7 @@ import { Connection } from "@solana/web3.js";
 // import fetch from "cross-fetch";
 import { IAgentRuntime, Memory, Provider, State } from "../core/types.ts";
 import settings from "../core/settings.ts";
-import { toBN, BN } from '../utils/bignumber.js';
+import { toBN, BN } from "../utils/bignumber.js";
 import {
     ProcessedTokenData,
     TokenSecurityData,
@@ -10,6 +10,8 @@ import {
     DexScreenerData,
     //   DexScreenerPair,
     HolderData,
+    TokenPriceData,
+    AltProcessedTokenData,
 } from "../types/token.ts";
 import NodeCache from "node-cache";
 import * as fs from "fs";
@@ -118,9 +120,7 @@ export class TokenProvider {
                     ...options,
                     headers: {
                         Accept: "application/json",
-                        "x-chain": "solana",
                         "X-API-KEY": settings.BIRDEYE_API_KEY || "",
-                        ...options.headers,
                     },
                 });
 
@@ -150,6 +150,41 @@ export class TokenProvider {
             lastError
         );
         throw lastError;
+    }
+
+    async fetchTokenPriceData(): Promise<TokenPriceData> {
+        const cacheKey = `tokenPrice_${this.tokenAddress}`;
+        const cachedData = this.getCachedData<TokenPriceData>(cacheKey);
+        if (cachedData) {
+            console.log(
+                `Returning cached token price data for ${this.tokenAddress}.`
+            );
+            return cachedData;
+        }
+        const currentTime = Math.floor(Date.now() / 1000);
+        const url = `https://public-api.birdeye.so/defi/history_price?address=${this.tokenAddress}&address_type=token&type=1H&time_from=${currentTime - 24 * 60 * 60}&time_to=${currentTime}`;
+        const options = {
+            method: "GET",
+            headers: {
+                accept: "application/json",
+                "x-chain": "solana",
+                "X-API-KEY": settings.BIRDEYE_API_KEY || "",
+            },
+        };
+        const tokenPriceResponse = await fetch(url, options);
+        const tokenPriceData = await tokenPriceResponse.json();
+        const tokenPrices = tokenPriceData.data.items.map(
+            (i: { address: string; unixTime: number; value: number }) => {
+                return {
+                    timestmap: i.unixTime,
+                    value: i.value,
+                };
+            }
+        );
+        this.setCachedData(cacheKey, tokenPrices);
+        console.log(`TokenPrice Data cached for ${this.tokenAddress}`);
+
+        return { prices: tokenPrices };
     }
 
     async fetchTokenSecurity(): Promise<TokenSecurityData> {
@@ -620,7 +655,9 @@ export class TokenProvider {
             })
             .map((holder) => ({
                 holderAddress: holder.address,
-                balanceUsd: toBN(holder.balance).multipliedBy(tokenPriceUsd).toFixed(2),
+                balanceUsd: toBN(holder.balance)
+                    .multipliedBy(tokenPriceUsd)
+                    .toFixed(2),
             }));
 
         return highValueHolders;
@@ -660,6 +697,12 @@ export class TokenProvider {
 
             console.log(`Fetching trade data for token: ${this.tokenAddress}`);
             const tradeData = await this.fetchTokenTradeData();
+
+            // console.log(
+            //     `Fetching historical price data for token: ${this.tokenAddress}`
+            // );
+
+            // const priceData = await this.fetchTokenPriceData();
 
             console.log(
                 `Fetching DexScreener data for token: ${this.tokenAddress}`
@@ -704,6 +747,7 @@ export class TokenProvider {
                 highValueHolders,
                 recentTrades,
                 highSupplyHoldersCount,
+                // priceData,
                 dexScreenerData: dexData,
                 isDexScreenerListed,
                 isDexScreenerPaid,
@@ -781,6 +825,45 @@ export class TokenProvider {
         return output;
     }
 
+    formatAltTokenData(data: AltProcessedTokenData): string {
+        let output = `**Token Price Data in the last 24 hours**\n`;
+        output += `Token Address: ${this.tokenAddress}\n\n`;
+
+        data.priceData.prices.forEach((price) => {
+            output += `- At ${new Date(price.timestamp * 1000).toLocaleString(
+                "en-US",
+                {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: true,
+                }
+            )} ${price.value}\n`;
+        });
+        // DexScreener Status
+        output += `**DexScreener Listing:** ${data.isDexScreenerListed ? "Yes" : "No"}\n`;
+        if (data.isDexScreenerListed) {
+            output += `- Listing Type: ${data.isDexScreenerPaid ? "Paid" : "Free"}\n`;
+            output += `- Number of DexPairs: ${data.dexScreenerData.pairs.length}\n\n`;
+            output += `**DexScreener Pairs:**\n`;
+            data.dexScreenerData.pairs.forEach((pair, index) => {
+                output += `\n**Pair ${index + 1}:**\n`;
+                output += `- DEX: ${pair.dexId}\n`;
+                output += `- URL: ${pair.url}\n`;
+                output += `- Price USD: $${toBN(pair.priceUsd).toFixed(6)}\n`;
+                output += `- Volume (24h USD): $${toBN(pair.volume.h24).toFixed(2)}\n`;
+                output += `- Boosts Active: ${pair.boosts && pair.boosts.active}\n`;
+                output += `- Liquidity USD: $${toBN(pair.liquidity.usd).toFixed(2)}\n`;
+            });
+        }
+        output += `\n`;
+
+        console.log("Formatted token data:", output);
+        return output;
+    }
     async getFormattedTokenReport(): Promise<string> {
         try {
             console.log("Generating formatted token report...");

@@ -193,7 +193,9 @@ export interface TokenTradeData {
     volume_sell_history_24h_usd: number;
     volume_sell_24h_change_percent: number | null;
 }
-
+export interface TokenPriceData {
+    prices: { timestamp: number; value: number }[];
+}
 export interface HolderData {
     address: string;
     balance: string;
@@ -211,6 +213,13 @@ export interface ProcessedTokenData {
     highSupplyHoldersCount: number;
     dexScreenerData: DexScreenerData;
 
+    isDexScreenerListed: boolean;
+    isDexScreenerPaid: boolean;
+}
+
+export interface AltProcessedTokenData {
+    priceData: TokenPriceData;
+    dexScreenerData: DexScreenerData;
     isDexScreenerListed: boolean;
     isDexScreenerPaid: boolean;
 }

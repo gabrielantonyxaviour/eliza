@@ -68,7 +68,7 @@ export function parseArguments(): Arguments {
 export function loadCharacters(charactersArg: string): Character[] {
     const characterPaths = charactersArg?.split(",").map((path) => path.trim());
     const loadedCharacters = [];
-   console.log(charactersArg)
+    console.log(charactersArg);
     if (characterPaths?.length > 0) {
         for (const path of characterPaths) {
             try {
@@ -140,7 +140,13 @@ export async function createAgentRuntime(
         modelProvider: character.modelProvider,
         evaluators: [],
         character,
-        providers: [Provider.timeProvider, Provider.boredomProvider],
+        providers: [
+            Provider.timeProvider,
+            Provider.boredomProvider,
+            Provider.tokenProvider,
+            Provider.walletProvider,
+            Provider.orderBookProvider,
+        ],
         actions: [
             // Default actions
             ...defaultActions,
