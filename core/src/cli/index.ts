@@ -180,7 +180,11 @@ export async function createDirectRuntime(
         modelProvider: character.modelProvider,
         evaluators: [],
         character,
-        providers: [Provider.timeProvider, Provider.boredomProvider],
+        providers: [
+            Provider.timeProvider,
+            Provider.boredomProvider,
+            Provider.newsProvider,
+        ],
         actions: [
             ...defaultActions,
             // Custom actions

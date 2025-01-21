@@ -26,17 +26,14 @@ const messageHandlerTemplate =
 
 {{providers}}
 
-Recent interactions between {{agentName}} and other users:
-{{recentPostInteractions}}
+**Message Response examples**
+{{characterMessageExamples}}
 
 About {{agentName}} (@{{twitterUserName}}):
 {{bio}}
 {{lore}}
 {{topics}}
 
-{{postDirections}}
-
-{{recentPosts}}
 
 # Task: Respond to the following post in the style and perspective of {{agentName}} (aka @{{twitterUserName}}). Write a {{adjective}} response for {{agentName}} to say directly in response to the post. don't generalize.
 {{currentPost}}
@@ -267,6 +264,10 @@ export class TwitterSearchClient extends ClientBase {
                 template: messageHandlerTemplate,
             });
 
+            const promptFilePath = `search_context_${Date.now()}.txt`;
+            fs.writeFileSync(promptFilePath, context.trim(), "utf8");
+            console.log(`Prompt saved to ${promptFilePath}`);
+
             // log context to file
             log_to_file(
                 `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_search_context`,
@@ -279,6 +280,8 @@ export class TwitterSearchClient extends ClientBase {
                 modelClass: ModelClass.SMALL,
             });
 
+            // const responseContent: Content = { text: "" };
+
             responseContent.inReplyTo = message.id;
 
             log_to_file(
@@ -287,6 +290,10 @@ export class TwitterSearchClient extends ClientBase {
             );
 
             const response = responseContent;
+
+            const responseFilePath = `search_response_${Date.now()}.txt`;
+            fs.writeFileSync(responseFilePath, response.text, "utf8");
+            console.log(`Response saved`);
 
             if (!response.text) {
                 console.log("Returning: No response text found");

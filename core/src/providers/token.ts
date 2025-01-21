@@ -26,7 +26,7 @@ const PROVIDER_CONFIG = {
         SOL: "So11111111111111111111111111111111111111112",
         BTC: "qfnqNqs3nCAHjnyCgLRDbBtq4p2MtHZxw8YjSyYhPoL",
         ETH: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
-        Example: "2weMjPLLybRMMva1fM3U31goWWrCpF59CHWNhnCJ9Vyh",
+        ZOROX: "BQ6yqeqDinHtTUHH4JMzUAZ1MqGdNzcu9sDVcLrmpump",
     },
     TOKEN_SECURITY_ENDPOINT: "/defi/token_security?address=",
     TOKEN_TRADE_DATA_ENDPOINT: "/defi/v3/token/trade-data/single?address=",
@@ -116,9 +116,14 @@ export class TokenProvider {
 
         for (let i = 0; i < PROVIDER_CONFIG.MAX_RETRIES; i++) {
             try {
+                console.log("URL");
+                console.log(url);
+                console.log("AIPI KEY");
+                console.log(settings);
                 const response = await fetch(url, {
                     ...options,
                     headers: {
+                        "x-chain": "solana",
                         Accept: "application/json",
                         "X-API-KEY": settings.BIRDEYE_API_KEY || "",
                     },
@@ -167,7 +172,6 @@ export class TokenProvider {
             method: "GET",
             headers: {
                 accept: "application/json",
-                "x-chain": "solana",
                 "X-API-KEY": settings.BIRDEYE_API_KEY || "",
             },
         };
@@ -197,7 +201,13 @@ export class TokenProvider {
             return cachedData;
         }
         const url = `${PROVIDER_CONFIG.BIRDEYE_API}${PROVIDER_CONFIG.TOKEN_SECURITY_ENDPOINT}${this.tokenAddress}`;
-        const data = await this.fetchWithRetry(url);
+        console.log(url);
+        const data = await this.fetchWithRetry(url, {
+            method: "GET",
+            headers: {
+                "x-chain": "solana", // TODO: Need to change based on chain
+            },
+        });
 
         if (!data?.success || !data?.data) {
             throw new Error("No token security data available");
@@ -876,7 +886,7 @@ export class TokenProvider {
     }
 }
 
-const tokenAddress = PROVIDER_CONFIG.TOKEN_ADDRESSES.Example;
+const tokenAddress = PROVIDER_CONFIG.TOKEN_ADDRESSES.ZOROX;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const connection = new Connection(PROVIDER_CONFIG.DEFAULT_RPC);
 const tokenProvider: Provider = {

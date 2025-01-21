@@ -26,27 +26,17 @@ export const messageHandlerTemplate =
     `{{relevantFacts}}
 {{recentFacts}}
 
-{{timeline}}
-
-{{providers}}
-
-# Task: Generate a post for the character {{agentName}}.
 About {{agentName}} (@{{twitterUserName}}):
 {{bio}}
 {{lore}}
 {{topics}}
 
-{{characterPostExamples}}
+{{characterMessageExamples}}
 
-{{postDirections}}
-
-Recent interactions between {{agentName}} and other users:
-{{recentPostInteractions}}
-
-{{recentPosts}}
-
-# Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}):
+# Task: Generate a reply to the below post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}):
 {{currentPost}}
+
+DONT use hashtags. Rarely use emojis. Use lowercase. Do not add commentary or ackwowledge this request, just write the post.
 
 ` + messageCompletionFooter;
 
@@ -70,7 +60,7 @@ IMPORTANT: {{agentName}} (aka @{{twitterUserName}}) is particularly sensitive ab
 
 {{currentPost}}
 
-# INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, or [IGNORE] if {{agentName}} should not respond to the last message and [STOP] if {{agentName}} should stop participating in the conversation.
+# INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, or [IGNORE] if {{agentName}} should not respond to the last message and [STOP] if {{agentName}} should stop participating in the conversation. RESPOND only if the last message is in English.
 ` + shouldRespondFooter;
 
 export class TwitterInteractionClient extends ClientBase {
@@ -300,11 +290,18 @@ export class TwitterInteractionClient extends ClientBase {
             context
         );
 
+        const promptFilePath = `interaction_context_${Date.now()}.txt`;
+        fs.writeFileSync(promptFilePath, context.trim(), "utf8");
+        console.log(`Prompt saved to ${promptFilePath}`);
+
         const response = await generateMessageResponse({
             runtime: this.runtime,
             context,
             modelClass: ModelClass.SMALL,
         });
+
+        const responseFilePath = `interaction_response_${Date.now()}.txt`;
+        fs.writeFileSync(responseFilePath, response.text, "utf8");
 
         console.log("response", response);
 

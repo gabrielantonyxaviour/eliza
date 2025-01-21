@@ -23,7 +23,7 @@ About {{agentName}} (@{{twitterUserName}}):
 
 # Task: Generate a post in the voice and style of {{agentName}}, aka @{{twitterUserName}}
 Write a single sentence post that is {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}. Try to write something totally different than previous posts. Do not add commentary or ackwowledge this request, just write the post.
-Your response should not contain any questions. Brief, concise statements only. No emojis. Use \\n\\n (double spaces) between statements.`;
+Your response should not contain any questions. Brief, concise statements only. No emojis.`;
 
 export class TwitterGenerationClient extends ClientBase {
     onReady() {
@@ -107,11 +107,19 @@ export class TwitterGenerationClient extends ClientBase {
                 context
             );
 
+            // const promptFilePath = `generate_context_${Date.now()}.txt`;
+            // fs.writeFileSync(promptFilePath, context.trim(), "utf8");
+            // console.log(`Prompt saved to ${promptFilePath}`);
+
             const newTweetContent = await generateText({
                 runtime: this.runtime,
                 context,
                 modelClass: ModelClass.SMALL,
             });
+
+            // const responseFilePath = `generate_response_${Date.now()}.txt`;
+            // fs.writeFileSync(responseFilePath, newTweetContent, "utf8");
+            // console.log(`Response saved`);
             console.log("New Tweet:", newTweetContent);
             log_to_file(
                 `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_generate_response`,
@@ -120,16 +128,15 @@ export class TwitterGenerationClient extends ClientBase {
 
             const slice = newTweetContent.replaceAll(/\\n/g, "\n").trim();
 
-            const content = slice;
-            // .slice(0, 280);
+            let content = slice.slice(0, 280);
             // // if its bigger than 280, delete the last line
-            // if (content.length > 280) {
-            //   content = content.slice(0, content.lastIndexOf("\n"));
-            // }
+            if (content.length > 280) {
+                content = content.slice(0, content.lastIndexOf("\n"));
+            }
 
-            // if(content.length < 1) {
-            //   content = slice.slice(0, 280);
-            // }
+            if (content.length < 1) {
+                content = slice.slice(0, 280);
+            }
 
             // Send the new tweet
             if (!this.dryRun) {
