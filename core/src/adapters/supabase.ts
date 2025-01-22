@@ -12,36 +12,48 @@ import {
 } from "../core/types.ts";
 import { DatabaseAdapter } from "../core/database.ts";
 import { v4 as uuid } from "uuid";
+
 export class SupabaseDatabaseAdapter extends DatabaseAdapter {
+
+    private supabase: SupabaseClient;
+
+    constructor(supabaseUrl: string, supabaseKey: string) {
+        super();
+        this.supabase = createClient(supabaseUrl, supabaseKey);
+    }
     async getRoom(roomId: UUID): Promise<UUID | null> {
-        const { data, error } = await this.supabase
-            .from("rooms")
-            .select("id")
-            .eq("id", roomId)
-            .single();
+        try {
+            const { data, error } = await this.supabase
+                .from("rooms")
+                .select("id")
+                .eq("id", roomId)
+                .single();
 
-        if (error) {
-            throw new Error(`Error getting room: ${error.message}`);
+            if (error) throw new Error(`Error getting room: ${error.message}`);
+            return data ? (data.id as UUID) : null;
+        } catch (error) {
+            console.error('Error in getRoom:', error);
+            throw error;
         }
-
-        return data ? (data.id as UUID) : null;
     }
 
     async getParticipantsForAccount(userId: UUID): Promise<Participant[]> {
-        const { data, error } = await this.supabase
-            .from("participants")
-            .select("*")
-            .eq("userId", userId);
+        try {
+            const { data, error } = await this.supabase
+                .from("participants")
+                .select("*")
+                .eq("userId", userId);
 
-        if (error) {
-            throw new Error(
-                `Error getting participants for account: ${error.message}`
-            );
+            if (error) {
+                throw new Error(`Error getting participants for account: ${error.message}`);
+            }
+
+            return data as Participant[];
+        } catch (error) {
+            console.error('Error in getParticipantsForAccount:', error);
+            return [];
         }
-
-        return data as Participant[];
     }
-
     async getParticipantUserState(
         roomId: UUID,
         userId: UUID
@@ -93,13 +105,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         return data.map((row) => row.userId as UUID);
     }
 
-    supabase: SupabaseClient;
-
-    constructor(supabaseUrl: string, supabaseKey: string) {
-        super();
-        this.supabase = createClient(supabaseUrl, supabaseKey);
-    }
-
+    x
     async getMemoriesByRoomIds(params: {
         roomIds: UUID[];
         agentId?: UUID;
@@ -261,6 +267,56 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             throw new Error(error.message);
         }
     }
+    async getMemoriesByUserId(params: {
+        userId: UUID;
+        count?: number;
+        unique?: boolean;
+        tableName: string;
+        agentId?: UUID;
+        start?: number;
+        end?: number;
+    }): Promise<Memory[]> {
+        try {
+            const query = this.supabase
+                .from(params.tableName)
+                .select("*")
+                .eq("userId", params.userId);
+
+            if (params.start) {
+                query.gte("createdAt", params.start);
+            }
+
+            if (params.end) {
+                query.lte("createdAt", params.end);
+            }
+
+            if (params.unique) {
+                query.eq("unique", true);
+            }
+
+            if (params.agentId) {
+                query.eq("agentId", params.agentId);
+            }
+
+            query.order("createdAt", { ascending: false });
+
+            if (params.count) {
+                query.limit(params.count);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                throw new Error(`Error retrieving memories: ${error.message}`);
+            }
+
+            return data as Memory[];
+        } catch (error) {
+            console.error('Error in getMemoriesByUserId:', error);
+            return [];
+        }
+    }
+
 
     async getMemories(params: {
         roomId: UUID;
@@ -307,38 +363,6 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         return data as Memory[];
     }
 
-    async searchMemoriesByEmbedding(
-        embedding: number[],
-        params: {
-            match_threshold?: number;
-            count?: number;
-            roomId?: UUID;
-            agentId?: UUID;
-            unique?: boolean;
-            tableName: string;
-        }
-    ): Promise<Memory[]> {
-        const queryParams = {
-            query_table_name: params.tableName,
-            query_roomId: params.roomId,
-            query_embedding: embedding,
-            query_match_threshold: params.match_threshold,
-            query_match_count: params.count,
-            query_unique: !!params.unique,
-        };
-        if (params.agentId) {
-            (queryParams as any).query_agentId = params.agentId;
-        }
-
-        const result = await this.supabase.rpc("search_memories", queryParams);
-        if (result.error) {
-            throw new Error(JSON.stringify(result.error));
-        }
-        return result.data.map((memory) => ({
-            ...memory,
-        }));
-    }
-
     async getMemoryById(memoryId: UUID): Promise<Memory | null> {
         const { data, error } = await this.supabase
             .from("memories")
@@ -354,43 +378,79 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         return data as Memory;
     }
 
+    async searchMemoriesByEmbedding(
+        embedding: number[],
+        params: {
+            match_threshold?: number;
+            count?: number;
+            roomId?: UUID;
+            agentId?: UUID;
+            unique?: boolean;
+            tableName: string;
+        }
+    ): Promise<Memory[]> {
+        try {
+            const queryParams = {
+                query_table_name: params.tableName,
+                query_roomId: params.roomId,
+                query_embedding: embedding,
+                query_match_threshold: params.match_threshold ?? 0.8, // Default threshold
+                query_match_count: params.count ?? 10, // Default count
+                query_unique: params.unique ?? false,
+                ...(params.agentId && { query_agentId: params.agentId })
+            };
+
+            const { data, error } = await this.supabase.rpc("search_memories", queryParams);
+
+            if (error) throw new Error(JSON.stringify(error));
+
+            return (data ?? []).map((memory) => ({
+                ...memory,
+                createdAt: memory.createdAt ? new Date(memory.createdAt) : new Date(),
+            }));
+        } catch (error) {
+            console.error('Error in searchMemoriesByEmbedding:', error);
+            return [];
+        }
+    }
+
     async createMemory(
         memory: Memory,
         tableName: string,
         unique = false
     ): Promise<void> {
-        const createdAt = memory.createdAt ?? Date.now();
-        if (unique) {
-            const opts = {
-                // TODO: Add ID option, optionally
-                query_table_name: tableName,
-                query_userId: memory.userId,
-                query_content: memory.content.text,
-                query_roomId: memory.roomId,
-                query_embedding: memory.embedding,
-                query_createdAt: createdAt,
-                similarity_threshold: 0.95,
-            };
+        try {
+            const createdAt = memory.createdAt ?? new Date().toISOString();
 
-            const result = await this.supabase.rpc(
-                "check_similarity_and_insert",
-                opts
-            );
+            if (unique) {
+                const opts = {
+                    query_table_name: tableName,
+                    query_userId: memory.userId,
+                    query_content: memory.content.text,
+                    query_roomId: memory.roomId,
+                    query_embedding: memory.embedding,
+                    query_createdAt: createdAt,
+                    similarity_threshold: 0.95,
+                };
 
-            if (result.error) {
-                throw new Error(JSON.stringify(result.error));
+                const { error } = await this.supabase.rpc(
+                    "check_similarity_and_insert",
+                    opts
+                );
+
+                if (error) throw new Error(JSON.stringify(error));
+            } else {
+                const { error } = await this.supabase
+                    .from("memories")
+                    .insert({ ...memory, createdAt, type: tableName });
+
+                if (error) throw new Error(JSON.stringify(error));
             }
-        } else {
-            const result = await this.supabase
-                .from("memories")
-                .insert({ ...memory, createdAt, type: tableName });
-            const { error } = result;
-            if (error) {
-                throw new Error(JSON.stringify(error));
-            }
+        } catch (error) {
+            console.error('Error in createMemory:', error);
+            throw error;
         }
     }
-
     async removeMemory(memoryId: UUID): Promise<void> {
         const result = await this.supabase
             .from("memories")
@@ -585,63 +645,54 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         userA: UUID;
         userB: UUID;
     }): Promise<boolean> {
-        const allRoomData = await this.getRoomsForParticipants([
-            params.userA,
-            params.userB,
-        ]);
+        try {
+            const allRoomData = await this.getRoomsForParticipants([
+                params.userA,
+                params.userB,
+            ]);
 
-        let roomId: UUID;
+            let roomId: UUID;
 
-        if (!allRoomData || allRoomData.length === 0) {
-            // If no existing room is found, create a new room
-            const { data: newRoomData, error: roomsError } = await this.supabase
-                .from("rooms")
-                .insert({})
-                .single();
+            if (!allRoomData?.length) {
+                const { data: newRoomData, error: roomsError } = await this.supabase
+                    .from("rooms")
+                    .insert({})
+                    .select()
+                    .single();
 
-            if (roomsError) {
-                throw new Error("Room creation error: " + roomsError.message);
+                if (roomsError) throw new Error("Room creation error: " + roomsError.message);
+                if (!newRoomData) throw new Error("No room data returned after creation");
+
+                roomId = newRoomData.id as UUID;
+            } else {
+                roomId = allRoomData[0];
             }
 
-            roomId = (newRoomData as Room)?.id as UUID;
-        } else {
-            // If an existing room is found, use the first room's ID
-            roomId = allRoomData[0];
-        }
-
-        const { error: participantsError } = await this.supabase
-            .from("participants")
-            .insert([
+            await this.supabase.from("participants").insert([
                 { userId: params.userA, roomId },
                 { userId: params.userB, roomId },
             ]);
 
-        if (participantsError) {
-            throw new Error(
-                "Participants creation error: " + participantsError.message
-            );
+            const { error: relationshipError } = await this.supabase
+                .from("relationships")
+                .upsert({
+                    userA: params.userA,
+                    userB: params.userB,
+                    userId: params.userA,
+                    status: "FRIENDS",
+                });
+
+            if (relationshipError) {
+                throw new Error("Relationship creation error: " + relationshipError.message);
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error in createRelationship:', error);
+            throw error;
         }
-
-        // Create or update the relationship between the two users
-        const { error: relationshipError } = await this.supabase
-            .from("relationships")
-            .upsert({
-                userA: params.userA,
-                userB: params.userB,
-                userId: params.userA,
-                status: "FRIENDS",
-            })
-            .eq("userA", params.userA)
-            .eq("userB", params.userB);
-
-        if (relationshipError) {
-            throw new Error(
-                "Relationship creation error: " + relationshipError.message
-            );
-        }
-
-        return true;
     }
+
 
     async getRelationship(params: {
         userA: UUID;

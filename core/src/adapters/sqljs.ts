@@ -56,6 +56,45 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
         return result.userState ?? null;
     }
 
+    async getMemoriesByUserId(params: { userId: UUID; count?: number; unique?: boolean; tableName: string; agentId?: UUID; start?: number; end?: number; }): Promise<Memory[]> {
+        let sql = `SELECT * FROM memories WHERE type = ? AND userId = ?`;
+        if (params.unique) {
+            sql += " AND `unique` = 1";
+        }
+        if (params.start) {
+            sql += " AND createdAt >= ?";
+        }
+        if (params.end) {
+            sql += " AND createdAt <= ?";
+        }
+        if (params.agentId) {
+            sql += " AND agentId = ?";
+        }
+        sql += " ORDER BY createdAt DESC";
+        if (params.count) {
+            sql += " LIMIT ?";
+        }
+        const stmt = this.db.prepare(sql);
+        stmt.bind([
+            params.tableName,
+            params.userId,
+            ...(params.start ? [params.start] : []),
+            ...(params.end ? [params.end] : []),
+            ...(params.agentId ? [params.agentId] : []),
+            ...(params.count ? [params.count] : []),
+        ]);
+        const memories: Memory[] = [];
+        while (stmt.step()) {
+            const memory = stmt.getAsObject() as unknown as Memory;
+            memories.push({
+                ...memory,
+                content: JSON.parse(memory.content as unknown as string),
+            });
+        }
+        stmt.free();
+        return memories;
+    }
+
     async getMemoriesByRoomIds(params: {
         roomIds: UUID[];
         tableName: string;

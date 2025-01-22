@@ -294,8 +294,13 @@ export type Character = {
     modelOverride?: string;
     bio: string | string[];
     lore: string[];
-    messageExamples: MessageExample[][];
-    postExamples: string[];
+    spamMessageExamples: MessageExample[][];
+    dataMessageExamples: MessageExample[][];
+    randomMessageExamples: MessageExample[][];
+    dataExamples: string[];
+    newsExamples: string[];
+    randomExamples: string[];
+    newsThreadsExamples: string[][];
     people: string[];
     topics: string[];
     adjectives: string[];
@@ -323,6 +328,15 @@ export interface IDatabaseAdapter {
     createAccount(account: Account): Promise<boolean>;
     getMemories(params: {
         roomId: UUID;
+        count?: number;
+        unique?: boolean;
+        tableName: string;
+        agentId?: UUID;
+        start?: number;
+        end?: number;
+    }): Promise<Memory[]>;
+    getMemoriesByUserId(params: {
+        userId: UUID;
         count?: number;
         unique?: boolean;
         tableName: string;
@@ -430,6 +444,14 @@ export interface IMemoryManager {
     addEmbeddingToMemory(memory: Memory): Promise<Memory>;
     getMemories(opts: {
         roomId: UUID;
+        count?: number;
+        unique?: boolean;
+        agentId?: UUID;
+        start?: number;
+        end?: number;
+    }): Promise<Memory[]>;
+    getMemoriesByUserId(opts: {
+        userId: UUID;
         count?: number;
         unique?: boolean;
         agentId?: UUID;

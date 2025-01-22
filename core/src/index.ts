@@ -16,6 +16,7 @@ import {
     getTokenForProvider,
     initializeClients,
     initializeDatabase,
+    initializeSupabase,
     loadCharacters,
     parseArguments,
 } from "./cli/index.ts";
@@ -40,7 +41,8 @@ directClient.start(serverPort);
 async function startAgent(character: Character) {
     prettyConsole.success(`Starting agent for character ${character.name}`);
     const token = getTokenForProvider(character.modelProvider, character);
-    const db = initializeDatabase();
+    // const db = initializeDatabase();
+    const db = initializeSupabase()
 
     const runtime = await createAgentRuntime(
         character,

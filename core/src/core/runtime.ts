@@ -49,7 +49,7 @@ import { embed } from "./embedding.ts";
 import { generateText, splitChunks } from "./generation.ts";
 import { formatGoalsAsString, getGoals } from "./goals.ts";
 import { formatActors, formatMessages, getActorDetails } from "./messages.ts";
-import { formatPosts } from "./posts.ts";
+import { formatAgentPosts, formatPosts } from "./posts.ts";
 import { defaultProviders, getProviders } from "./providers.ts";
 import settings from "./settings.ts";
 import { UUID, type Actor } from "./types.ts";
@@ -663,8 +663,8 @@ export class AgentRuntime implements IAgentRuntime {
         const recentFactsCount = Math.ceil(this.getConversationLength() / 2);
         const relevantFactsCount = Math.ceil(this.getConversationLength() / 2);
 
-        const [actorsData, recentMessagesData, recentFactsData, goalsData]: [
-            Actor[],
+        const [actorsData, recentMessagesData, recentAgentPostsData, recentFactsData, goalsData]: [
+            Actor[], Memory[],
             Memory[],
             Memory[],
             Goal[],
@@ -675,6 +675,10 @@ export class AgentRuntime implements IAgentRuntime {
                 agentId: this.agentId,
                 count: conversationLength,
                 unique: false,
+            }),
+            this.messageManager.getMemoriesByUserId({
+                agentId: this.agentId,
+                userId: this.agentId, count: conversationLength,
             }),
             this.factManager.getMemories({
                 agentId: this.agentId,
@@ -722,6 +726,18 @@ export class AgentRuntime implements IAgentRuntime {
             actors: actorsData,
             conversationHeader: false,
         });
+
+        const recentRandomPosts = formatAgentPosts({
+            messages: recentRandomPostsData,
+        });
+
+        const recentDataPosts = formatAgentPosts({
+            messages: recentDataPostsData,
+        })
+
+        const recentNewsPosts = formatAgentPosts({
+            messages: recentNewsPostsData,
+        })
 
         const recentFacts = formatFacts(recentFactsData);
         const relevantFacts = formatFacts(relevantFactsData);
@@ -792,8 +808,7 @@ Text: ${attachment.text}
             const selectedLore = shuffledLore.slice(0, 10);
             lore = selectedLore.join("\n");
         }
-
-        const formattedCharacterPostExamples = this.character.postExamples
+        const formattedRandomExamples = this.character.randomExamples
             .sort(() => 0.5 - Math.random())
             .map((post) => {
                 const messageString = `${post}`;
@@ -802,7 +817,47 @@ Text: ${attachment.text}
             .slice(0, 50)
             .join("\n");
 
-        const formattedCharacterMessageExamples = this.character.messageExamples
+        const formattedDataExamples = this.character.dataExamples.sort(() => 0.5 - Math.random())
+            .map((post) => {
+                const messageString = `${post}`;
+                return messageString;
+            })
+            .slice(0, 50)
+            .join("\n");
+
+        const formattedNewsExamples = this.character.newsExamples.sort(() => 0.5 - Math.random())
+            .map((post) => {
+                const messageString = `${post}`;
+                return messageString;
+            })
+            .slice(0, 10)
+            .join("\n");
+
+
+        const formattedSpamMessageExamples = this.character.spamMessageExamples
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 5)
+            .map((example) => {
+                const exampleNames = Array.from({ length: 5 }, () =>
+                    uniqueNamesGenerator({ dictionaries: [names] })
+                );
+
+                return example
+                    .map((message) => {
+                        let messageString = `${message.user}: ${message.content.text}`;
+                        exampleNames.forEach((name, index) => {
+                            const placeholder = `{{user${index + 1}}}`;
+                            messageString = messageString.replaceAll(
+                                placeholder,
+                                name
+                            );
+                        });
+                        return messageString;
+                    })
+                    .join("\n");
+            })
+            .join("\n\n");
+        const formattedDataMessageExamples = this.character.dataMessageExamples
             .sort(() => 0.5 - Math.random())
             .slice(0, 5)
             .map((example) => {
@@ -826,6 +881,29 @@ Text: ${attachment.text}
             })
             .join("\n\n");
 
+        const formattedRandomMessageExamples = this.character.randomMessageExamples
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 5)
+            .map((example) => {
+                const exampleNames = Array.from({ length: 5 }, () =>
+                    uniqueNamesGenerator({ dictionaries: [names] })
+                );
+
+                return example
+                    .map((message) => {
+                        let messageString = `${message.user}: ${message.content.text}`;
+                        exampleNames.forEach((name, index) => {
+                            const placeholder = `{{user${index + 1}}}`;
+                            messageString = messageString.replaceAll(
+                                placeholder,
+                                name
+                            );
+                        });
+                        return messageString;
+                    })
+                    .join("\n");
+            })
+            .join("\n\n");
         const getRecentInteractions = async (
             userA: UUID,
             userB: UUID
@@ -920,12 +998,12 @@ Text: ${attachment.text}
             lore,
             adjective:
                 this.character.adjectives &&
-                this.character.adjectives.length > 0
+                    this.character.adjectives.length > 0
                     ? this.character.adjectives[
-                          Math.floor(
-                              Math.random() * this.character.adjectives.length
-                          )
-                      ]
+                    Math.floor(
+                        Math.random() * this.character.adjectives.length
+                    )
+                    ]
                     : "",
             // Recent interactions between the sender and receiver, formatted as messages
             recentMessageInteractions: formattedMessageInteractions,
@@ -937,81 +1015,115 @@ Text: ${attachment.text}
             topic:
                 this.character.topics && this.character.topics.length > 0
                     ? this.character.topics[
-                          Math.floor(
-                              Math.random() * this.character.topics.length
-                          )
-                      ]
+                    Math.floor(
+                        Math.random() * this.character.topics.length
+                    )
+                    ]
                     : null,
             topics:
                 this.character.topics && this.character.topics.length > 0
                     ? `${this.character.name} is interested in ` +
-                      this.character.topics
-                          .sort(() => 0.5 - Math.random())
-                          .slice(0, 5)
-                          .map((topic, index) => {
-                              if (index === this.character.topics.length - 2) {
-                                  return topic + " and ";
-                              }
-                              // if last topic, don't add a comma
-                              if (index === this.character.topics.length - 1) {
-                                  return topic;
-                              }
-                              return topic + ", ";
-                          })
-                          .join("")
+                    this.character.topics
+                        .sort(() => 0.5 - Math.random())
+                        .slice(0, 5)
+                        .map((topic, index) => {
+                            if (index === this.character.topics.length - 2) {
+                                return topic + " and ";
+                            }
+                            // if last topic, don't add a comma
+                            if (index === this.character.topics.length - 1) {
+                                return topic;
+                            }
+                            return topic + ", ";
+                        })
+                        .join("")
                     : "",
-            characterPostExamples:
-                formattedCharacterPostExamples &&
-                formattedCharacterPostExamples.replaceAll("\n", "").length > 0
+            randomExamples:
+                formattedRandomExamples &&
+                    formattedRandomExamples.replaceAll("\n", "").length > 0
                     ? addHeader(
-                          `# Example Posts for ${this.character.name}`,
-                          formattedCharacterPostExamples
-                      )
+                        `# Example Posts for ${this.character.name}`,
+                        formattedRandomExamples
+                    )
                     : "",
-            characterMessageExamples:
-                formattedCharacterMessageExamples &&
-                formattedCharacterMessageExamples.replaceAll("\n", "").length >
+            dataExamples:
+                formattedDataExamples &&
+                    formattedDataExamples.replaceAll("\n", "").length >
                     0
                     ? addHeader(
-                          `# Example Conversations for ${this.character.name}`,
-                          formattedCharacterMessageExamples
-                      )
+                        `# Example Posts for ${this.character.name}`,
+                        formattedDataExamples
+                    )
+                    : "",
+            newsExamples:
+                formattedNewsExamples &&
+                    formattedNewsExamples.replaceAll("\n", "").length >
+                    0
+                    ? addHeader(
+                        `# Example Posts for ${this.character.name}`,
+                        formattedNewsExamples
+                    )
+                    : "",
+            spamMessageExamples:
+                formattedSpamMessageExamples &&
+                    formattedSpamMessageExamples.replaceAll("\n", "").length >
+                    0
+                    ? addHeader(
+                        `# Example Conversations for ${this.character.name}`,
+                        formattedSpamMessageExamples
+                    )
+                    : "", randomMessageExamples:
+                formattedRandomMessageExamples &&
+                    formattedRandomMessageExamples.replaceAll("\n", "").length >
+                    0
+                    ? addHeader(
+                        `# Example Conversations for ${this.character.name}`,
+                        formattedRandomMessageExamples
+                    )
+                    : "", dataMessageExamples:
+                formattedDataMessageExamples &&
+                    formattedDataMessageExamples.replaceAll("\n", "").length >
+                    0
+                    ? addHeader(
+                        `# Example Conversations for ${this.character.name}`,
+                        formattedDataMessageExamples
+                    )
                     : "",
             messageDirections:
                 this.character?.style?.all?.length > 0 ||
-                this.character?.style?.chat.length > 0
+                    this.character?.style?.chat.length > 0
                     ? addHeader(
-                          "# Message Directions for " + this.character.name,
-                          (() => {
-                              const all = this.character?.style?.all || [];
-                              const chat = this.character?.style?.chat || [];
-                              const shuffled = [...all, ...chat].sort(
-                                  () => 0.5 - Math.random()
-                              );
-                              const allSliced = shuffled.slice(
-                                  0,
-                                  conversationLength / 2
-                              );
-                              return allSliced.concat(allSliced).join("\n");
-                          })()
-                      )
+                        "# Message Directions for " + this.character.name,
+                        (() => {
+                            const all = this.character?.style?.all || [];
+                            const chat = this.character?.style?.chat || [];
+                            const shuffled = [...all, ...chat].sort(
+                                () => 0.5 - Math.random()
+                            );
+                            const allSliced = shuffled.slice(
+                                0,
+                                conversationLength / 2
+                            );
+                            return allSliced.concat(allSliced).join("\n");
+                        })()
+                    )
                     : "",
             postDirections:
                 this.character?.style?.all?.length > 0 ||
-                this.character?.style?.post.length > 0
+                    this.character?.style?.post.length > 0
                     ? addHeader(
-                          "# Post Directions for " + this.character.name,
-                          (() => {
-                              const all = this.character?.style?.all || [];
-                              const post = this.character?.style?.post || [];
-                              const shuffled = [...all, ...post].sort(
-                                  () => 0.5 - Math.random()
-                              );
-                              return shuffled
-                                  .slice(0, conversationLength / 2)
-                                  .join("\n");
-                          })()
-                      )
+                        "# Post Directions for " + this.character.name,
+                        (() => {
+                            const all = this.character?.style?.all || [];
+                            const post = this.character?.style?.post || [];
+                            const shuffled = [...all, ...post].sort(
+                                () => 0.5 - Math.random()
+                            );
+                            return shuffled
+                                .slice(0, conversationLength / 2)
+                                .join("\n");
+                        })()
+                    )
                     : "",
             // Agent runtime stuff
             senderName,
@@ -1024,9 +1136,9 @@ Text: ${attachment.text}
             goals:
                 goals && goals.length > 0
                     ? addHeader(
-                          "# Goals\n{{agentName}} should prioritize accomplishing the objectives that are in progress.",
-                          goals
-                      )
+                        "# Goals\n{{agentName}} should prioritize accomplishing the objectives that are in progress.",
+                        goals
+                    )
                     : "",
             goalsData,
             recentMessages:
@@ -1038,6 +1150,9 @@ Text: ${attachment.text}
                     ? addHeader("# Posts in Thread", recentPosts)
                     : "",
             recentMessagesData,
+            recentRandomPosts: recentRandomPosts && recentRandomPosts.length > 0 ? addHeader("# Recent Posts", recentRandomPosts) : "",
+            recentDataPosts: recentDataPosts && recentDataPosts.length > 0 ? addHeader("# Recent Posts", recentDataPosts) : "",
+            recentNewsPosts: recentNewsPosts && recentNewsPosts.length > 0 ? addHeader("# Recent Posts", recentNewsPosts) : "",
             recentFacts:
                 recentFacts && recentFacts.length > 0
                     ? addHeader("# Recent Facts", recentFacts)
@@ -1093,16 +1208,16 @@ Text: ${attachment.text}
             actions:
                 actionsData.length > 0
                     ? addHeader(
-                          "# Available Actions",
-                          formatActions(actionsData)
-                      )
+                        "# Available Actions",
+                        formatActions(actionsData)
+                    )
                     : "",
             actionExamples:
                 actionsData.length > 0
                     ? addHeader(
-                          "# Action Examples",
-                          composeActionExamples(actionsData, 10)
-                      )
+                        "# Action Examples",
+                        composeActionExamples(actionsData, 10)
+                    )
                     : "",
             evaluatorsData,
             evaluators:

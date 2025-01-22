@@ -58,3 +58,12 @@ ${message.content.text}`;
 
     return formattedPosts.join("\n\n");
 };
+
+
+export const formatAgentPosts = ({ messages }: {
+    messages: Memory[];
+}): string => {
+    return messages.map((message: Memory) => {
+        return `${message.content.text}`;
+    }).join("\n");
+}

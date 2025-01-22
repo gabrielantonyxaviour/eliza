@@ -49,7 +49,7 @@ class NewsProvider {
         TWITTER_ACCOUNTS: ["cointelegraph", "coindesk", "TheBlock__"],
         MAX_RETRIES: 3,
         RETRY_DELAY: 2000,
-        FILTERS: ["hot", "rising", "bullish"] as const,
+        FILTERS: ["hot", "rising", "bullish", 'bearish', 'important', 'lol'] as const,
     };
 
     constructor() {
@@ -76,15 +76,23 @@ class NewsProvider {
         const cached = this.getCachedData<CryptoPanicRawResponse>(cacheKey);
         if (cached) return cached;
 
+        let responseData = []
+        let posIndex = 0
+
         for (let i = 0; i < this.API_CONFIG.MAX_RETRIES; i++) {
             try {
-                const response = await fetch(url);
-                if (!response.ok)
-                    throw new Error(`HTTP status ${response.status}`);
+                while (posIndex < this.API_CONFIG.FILTERS.length) {
+                    const response = await fetch(url + "&filter=" + this.API_CONFIG.FILTERS[posIndex]);
+                    if (!response.ok)
+                        throw new Error(`HTTP status ${response.status}`);
 
-                const data = await response.json();
-                this.setCachedData(cacheKey, data);
-                return data;
+                    const data = await response.json();
+                    responseData.push(...data.results)
+                    posIndex++
+                }
+
+                this.setCachedData(cacheKey, { results: responseData });
+                return { results: responseData };
             } catch (error) {
                 if (i === this.API_CONFIG.MAX_RETRIES - 1) throw error;
                 await new Promise((resolve) =>
@@ -124,7 +132,6 @@ class NewsProvider {
                 created_at: tweet.created_at,
             }));
         } catch (error) {
-            console.error("Error fetching Twitter news:", error);
             return [];
         }
     }
@@ -132,12 +139,14 @@ class NewsProvider {
     private calculateSentiment(
         votes: CryptoPanicRawResponse["results"][0]["votes"]
     ): number {
+        console.log(votes)
+        if (!votes) return 0
         return (
-            votes.positive * 2 +
-            votes.liked -
-            votes.negative * 2 -
-            votes.disliked -
-            votes.toxic * 3
+            (votes.positive ? votes.positive * 2 : 0) +
+            (votes.liked ? votes.liked : 0) -
+            (votes.negative ? votes.negative * 2 : 0) -
+            (votes.disliked ? votes.disliked : 0) -
+            (votes.toxic ? votes.toxic * 3 : 0)
         );
     }
 
@@ -146,7 +155,7 @@ class NewsProvider {
     ): CryptoPanicNewsItem[] {
         return rawNews.results.map((item) => ({
             sentiment: this.calculateSentiment(item.votes),
-            source: item.source.domain,
+            source: item.domain,
             title: item.title,
             published_at: item.published_at,
             currencies: item.currencies
@@ -174,12 +183,13 @@ class NewsProvider {
                 )
                 // Sort by sentiment and date
                 .sort((a, b) => {
-                    if (b.sentiment !== a.sentiment) {
-                        return b.sentiment - a.sentiment;
+                    if (new Date(b.published_at).getTime() !=
+                        new Date(a.published_at).getTime()) {
+                        return new Date(b.published_at).getTime() -
+                            new Date(a.published_at).getTime();
                     }
                     return (
-                        new Date(b.published_at).getTime() -
-                        new Date(a.published_at).getTime()
+                        b.sentiment - a.sentiment
                     );
                 })
                 .slice(0, 20); // Keep top 20 news items
@@ -208,7 +218,7 @@ class NewsProvider {
                 output += `   Related: ${news.currencies.map((code) => `$${code}`).join(", ")}\n`;
             }
             output += `   Source: ${news.source}\n`;
-            output += `   Sentiment: ${news.sentiment > 0 ? "📈 Bullish" : "📉 Bearish"}\n\n`;
+            output += `   Public Sentiment: ${news.sentiment > 0 ? "📈 Positive" : "📉 Negative"}\n\n`;
         });
 
         // Format Twitter news if available

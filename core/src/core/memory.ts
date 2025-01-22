@@ -180,6 +180,19 @@ export class MemoryManager implements IMemoryManager {
         return result;
     }
 
+    async getMemoriesByUserId(opts: { userId: UUID; count?: number; unique?: boolean; agentId?: UUID; start?: number; end?: number; }): Promise<Memory[]> {
+        const result = await this.runtime.databaseAdapter.getMemoriesByUserId({
+            userId: opts.userId,
+            count: opts.count,
+            unique: opts.unique,
+            tableName: this.tableName,
+            agentId: opts.agentId,
+            start: opts.start,
+            end: opts.end,
+        });
+        return result;
+    }
+
     async getMemoryById(id: UUID): Promise<Memory | null> {
         const result = await this.runtime.databaseAdapter.getMemoryById(id);
         return result;

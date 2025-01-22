@@ -123,6 +123,13 @@ export function initializeDatabase() {
     }
 }
 
+export function initializeSupabase() {
+    return new Adapter.SupabaseDatabaseAdapter(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_KEY,
+    );
+}
+
 export async function createAgentRuntime(
     character: Character,
     db: any,

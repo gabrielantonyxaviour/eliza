@@ -44,6 +44,33 @@ About {{agentName}}:
 # Instructions: Write the next message for {{agentName}}. Ignore "action". Use lowercase. Rarely use emojis.
 ` + messageCompletionFooter;
 
+export const randomTemplate = `
+About {{agentName}}:
+{{bio}}
+{{lore}}
+
+{{randomExamples}}
+
+{{recentRandomPosts}}
+
+# Instructions: Use the examples as reference and generate a random tweet for {{agentName}}. Don't post a news that is already posted in recent posts. Use lowercase. Rarely use emojis.
+` + messageCompletionFooter;
+
+export const newsTemplate = `
+About {{agentName}}:
+{{bio}}
+{{lore}}
+
+{{providers}}
+
+{{newsExamples}}
+
+{{recentNewsPosts}}
+
+# Instructions: Use the examples as reference for tweet format (DO NOT use the Example Posts as source of data. They are just examples.) and choose a news provided by the Top Crypto News or Crypto Twitter which is relevant based on the bio and lore of {{agentName}}. Don't post a news that is already posted in recent posts.  Use lowercase. Rarely use emojis.
+` + messageCompletionFooter;
+
+
 export interface SimliClientConfig {
     apiKey: string;
     faceID: string;
@@ -179,21 +206,40 @@ class DirectClient {
                     createdAt: Date.now(),
                 };
 
+
                 await runtime.messageManager.createMemory(memory);
 
                 const state = (await runtime.composeState(userMessage, {
                     agentName: runtime.character.name,
                 })) as State;
 
-                const context = composeContext({
+                let context;
+                if (text == 'random') context = composeContext({
+                    state, template: randomTemplate
+                });
+                else if (text == 'news')
+                    context = composeContext({
+                        state,
+                        template: newsTemplate,
+                    });
+                else if (text == 'image')
+                    context = composeContext({
+                        state,
+                        template: messageHandlerTemplate,
+                    });
+
+                else if (text == 'data') context = composeContext({
+                    state, template: randomTemplate
+                });
+                else context = composeContext({
                     state,
                     template: messageHandlerTemplate,
                 });
-
+                console.log(context)
                 const response = await generateMessageResponse({
                     runtime: runtime,
                     context,
-                    modelClass: ModelClass.SMALL,
+                    modelClass: text == 'data' ? ModelClass.LARGE : ModelClass.SMALL,
                 });
 
                 // save response to memory

@@ -45,6 +45,27 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
         tableName: string;
     }): Promise<Memory[]>;
 
+    /**
+     * 
+     * @param params An object containing parameters for the memory retrieval.
+     * @returns A Promise that resolves to an array of Memory objects.
+     * 
+     */
+    abstract getMemoriesByUserId(params: {
+        userId: UUID;
+        count?: number;
+        unique?: boolean;
+        tableName: string;
+        agentId?: UUID;
+        start?: number;
+        end?: number;
+    }): Promise<Memory[]>;
+
+    /**
+     * Retrieves memories based on the specified parameters.
+     * @param params An object containing parameters for the memory retrieval.
+     * @returns A Promise that resolves to an array of Memory objects.
+     */
     abstract getMemoriesByRoomIds(params: {
         agentId?: UUID;
         roomIds: UUID[];

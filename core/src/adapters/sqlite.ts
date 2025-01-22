@@ -395,6 +395,63 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
             );
     }
 
+
+    async getMemoriesByUserId(params: {
+        userId: UUID;
+        count?: number;
+        unique?: boolean;
+        tableName: string;
+        agentId?: UUID;
+        start?: number;
+        end?: number;
+    }): Promise<Memory[]> {
+
+        if (!params.tableName) {
+            throw new Error("tableName is required");
+        }
+
+        if (!params.userId) {
+            throw new Error("userId is required");
+        }
+
+        let sql = `SELECT * FROM memories WHERE type = ? AND userId = ?`;
+        const queryParams = [params.tableName, params.userId] as any[];
+
+        if (params.unique) {
+            sql += " AND `unique` = 1";
+        }
+
+        if (params.agentId) {
+            sql += " AND agentId = ?";
+            queryParams.push(params.agentId);
+        }
+
+        if (params.start) {
+            sql += ` AND createdAt >= ?`;
+            queryParams.push(params.start);
+        }
+
+        if (params.end) {
+            sql += ` AND createdAt <= ?`;
+            queryParams.push(params.end);
+        }
+
+        sql += " ORDER BY createdAt DESC";
+
+        if (params.count) {
+            sql += " LIMIT ?";
+            queryParams.push(params.count);
+        }
+
+        const memories = this.db.prepare(sql).all(...queryParams) as Memory[];
+
+        return memories.map(memory => ({
+            ...memory,
+            createdAt: typeof memory.createdAt === "string" ? Date.parse(memory.createdAt as string) : memory.createdAt,
+            content: JSON.parse(memory.content as unknown as string)
+        }));
+    }
+
     async getMemories(params: {
         roomId: UUID;
         count?: number;
