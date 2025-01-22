@@ -286,7 +286,7 @@ const boredomProvider: Provider = {
             start: fifteenMinutesAgo,
             end: now,
             count: 20,
-            unique: false,
+            is_unique: false,
         });
 
         let boredomScore = 0;

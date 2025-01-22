@@ -140,9 +140,6 @@ export class AgentRuntime implements IAgentRuntime {
      */
     character: Character;
 
-    /**
-     * Store messages that are sent and received by the agent.
-     */
     messageManager: IMemoryManager;
 
     /**
@@ -658,12 +655,13 @@ export class AgentRuntime implements IAgentRuntime {
         additionalKeys: { [key: string]: unknown } = {}
     ) {
         const { userId, roomId } = message;
+        const { kind } = additionalKeys
 
         const conversationLength = this.getConversationLength();
         const recentFactsCount = Math.ceil(this.getConversationLength() / 2);
         const relevantFactsCount = Math.ceil(this.getConversationLength() / 2);
 
-        const [actorsData, recentMessagesData, recentAgentPostsData, recentFactsData, goalsData]: [
+        const [actorsData, recentMessagesData, recentMessagesByKindData, recentFactsData, goalsData]: [
             Actor[], Memory[],
             Memory[],
             Memory[],
@@ -674,11 +672,11 @@ export class AgentRuntime implements IAgentRuntime {
                 roomId,
                 agentId: this.agentId,
                 count: conversationLength,
-                unique: false,
+                is_unique: false,
             }),
-            this.messageManager.getMemoriesByUserId({
+            this.messageManager.getMemoriesByKind({
                 agentId: this.agentId,
-                userId: this.agentId, count: conversationLength,
+                kind: kind ? (kind as string) : "post",
             }),
             this.factManager.getMemories({
                 agentId: this.agentId,
@@ -721,23 +719,16 @@ export class AgentRuntime implements IAgentRuntime {
             actors: actorsData,
         });
 
+        const recentMessagesByKind = formatMessages({
+            messages: recentMessagesByKindData,
+            actors: actorsData,
+        })
+
         const recentPosts = formatPosts({
             messages: recentMessagesData,
             actors: actorsData,
             conversationHeader: false,
         });
-
-        const recentRandomPosts = formatAgentPosts({
-            messages: recentRandomPostsData,
-        });
-
-        const recentDataPosts = formatAgentPosts({
-            messages: recentDataPostsData,
-        })
-
-        const recentNewsPosts = formatAgentPosts({
-            messages: recentNewsPostsData,
-        })
 
         const recentFacts = formatFacts(recentFactsData);
         const relevantFacts = formatFacts(relevantFactsData);
@@ -1145,14 +1136,15 @@ Text: ${attachment.text}
                 recentMessages && recentMessages.length > 0
                     ? addHeader("# Conversation Messages", recentMessages)
                     : "",
+            recentMessagesByKind:
+                recentMessagesByKind && recentMessagesByKind.length > 0
+                    ? addHeader("# Example Messages", recentMessagesByKind)
+                    : "",
             recentPosts:
                 recentPosts && recentPosts.length > 0
                     ? addHeader("# Posts in Thread", recentPosts)
                     : "",
             recentMessagesData,
-            recentRandomPosts: recentRandomPosts && recentRandomPosts.length > 0 ? addHeader("# Recent Posts", recentRandomPosts) : "",
-            recentDataPosts: recentDataPosts && recentDataPosts.length > 0 ? addHeader("# Recent Posts", recentDataPosts) : "",
-            recentNewsPosts: recentNewsPosts && recentNewsPosts.length > 0 ? addHeader("# Recent Posts", recentNewsPosts) : "",
             recentFacts:
                 recentFacts && recentFacts.length > 0
                     ? addHeader("# Recent Facts", recentFacts)
@@ -1247,7 +1239,7 @@ Text: ${attachment.text}
             roomId: state.roomId,
             agentId: this.agentId,
             count: conversationLength,
-            unique: false,
+            is_unique: false,
         });
 
         const recentMessages = formatMessages({

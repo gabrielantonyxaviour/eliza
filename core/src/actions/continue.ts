@@ -40,7 +40,7 @@ export const continueAction: Action = {
             roomId: message.roomId,
             agentId: runtime.agentId,
             count: 10,
-            unique: false,
+            is_unique: false,
         });
         const agentMessages = recentMessagesData.filter(
             (m: { userId: any }) => m.userId === runtime.agentId

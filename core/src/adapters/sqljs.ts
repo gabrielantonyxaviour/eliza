@@ -56,9 +56,9 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
         return result.userState ?? null;
     }
 
-    async getMemoriesByUserId(params: { userId: UUID; count?: number; unique?: boolean; tableName: string; agentId?: UUID; start?: number; end?: number; }): Promise<Memory[]> {
+    async getMemoriesByUserId(params: { userId: UUID; count?: number; is_unique?: boolean; tableName: string; agentId?: UUID; start?: number; end?: number; }): Promise<Memory[]> {
         let sql = `SELECT * FROM memories WHERE type = ? AND userId = ?`;
-        if (params.unique) {
+        if (params.is_unique) {
             sql += " AND `unique` = 1";
         }
         if (params.start) {
@@ -300,7 +300,7 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
         embedding: number[];
         match_threshold: number;
         match_count: number;
-        unique: boolean;
+        is_unique: boolean;
     }): Promise<Memory[]> {
         let sql =
             `
@@ -311,7 +311,7 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
   WHERE type = ?
   AND roomId = ?`;
 
-        if (params.unique) {
+        if (params.is_unique) {
             sql += " AND `unique` = 1";
         }
         // TODO: Uncomment when we compile sql.js with vss
@@ -344,7 +344,7 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
             count?: number;
             roomId?: UUID;
             agentId?: UUID;
-            unique?: boolean;
+            is_unique?: boolean;
             tableName: string;
         }
     ): Promise<Memory[]> {
@@ -355,7 +355,7 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
             ` FROM memories
         WHERE type = ?`;
 
-        if (params.unique) {
+        if (params.is_unique) {
             sql += " AND `unique` = 1";
         }
         if (params.roomId) {
@@ -474,7 +474,7 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
     async getMemories(params: {
         roomId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
@@ -496,7 +496,7 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
             sql += ` AND createdAt <= ?`;
         }
 
-        if (params.unique) {
+        if (params.is_unique) {
             sql += " AND `unique` = 1";
         }
 

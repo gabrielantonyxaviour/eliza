@@ -240,7 +240,7 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
         embedding: number[];
         match_threshold: number;
         match_count: number;
-        unique: boolean;
+        is_unique: boolean;
     }): Promise<Memory[]> {
         const queryParams = [
             new Float32Array(params.embedding), // Ensure embedding is Float32Array
@@ -254,7 +254,7 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
       FROM memories
       WHERE type = ?`;
 
-        if (params.unique) {
+        if (params.is_unique) {
             sql += " AND `unique` = 1";
         }
 
@@ -286,7 +286,7 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
             count?: number;
             roomId?: UUID;
             agentId?: UUID;
-            unique?: boolean;
+            is_unique?: boolean;
             tableName: string;
         }
     ): Promise<Memory[]> {
@@ -301,7 +301,7 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
       FROM memories
       WHERE type = ?`;
 
-        if (params.unique) {
+        if (params.is_unique) {
             sql += " AND `unique` = 1";
         }
         if (params.agentId) {
@@ -399,7 +399,7 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
     async getMemoriesByUserId(params: {
         userId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
@@ -417,7 +417,7 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
         let sql = `SELECT * FROM memories WHERE type = ? AND userId = ?`;
         const queryParams = [params.tableName, params.userId] as any[];
 
-        if (params.unique) {
+        if (params.is_unique) {
             sql += " AND `unique` = 1";
         }
 
@@ -455,7 +455,7 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
     async getMemories(params: {
         roomId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
@@ -471,7 +471,7 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
 
         const queryParams = [params.tableName, params.roomId] as any[];
 
-        if (params.unique) {
+        if (params.is_unique) {
             sql += " AND `unique` = 1";
         }
 

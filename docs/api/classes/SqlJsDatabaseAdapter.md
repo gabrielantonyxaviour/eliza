@@ -338,7 +338,7 @@ Retrieves memories based on the specified parameters.
 | `params.count?`    | `number`                                                   | -                                                         |
 | `params.room_id`   | \`$\{string}-$\{string}-$\{string}-$\{string}-$\{string}\` | -                                                         |
 | `params.tableName` | `string`                                                   | -                                                         |
-| `params.unique?`   | `boolean`                                                  | -                                                         |
+| `params.is_unique?`   | `boolean`                                                  | -                                                         |
 
 #### Returns
 
@@ -714,7 +714,7 @@ Searches for memories based on embeddings and other specified parameters.
 | `params.match_threshold` | `number`                                                   | -                                                      |
 | `params.room_id`         | \`$\{string}-$\{string}-$\{string}-$\{string}-$\{string}\` | -                                                      |
 | `params.tableName`       | `string`                                                   | -                                                      |
-| `params.unique`          | `boolean`                                                  | -                                                      |
+| `params.is_unique`          | `boolean`                                                  | -                                                      |
 
 #### Returns
 
@@ -744,7 +744,7 @@ Searches for memories by embedding and other specified parameters.
 | `params.match_threshold?` | `number`                                                   | -                                     |
 | `params.room_id?`         | \`$\{string}-$\{string}-$\{string}-$\{string}-$\{string}\` | -                                     |
 | `params.tableName`        | `string`                                                   | -                                     |
-| `params.unique?`          | `boolean`                                                  | -                                     |
+| `params.is_unique?`          | `boolean`                                                  | -                                     |
 
 #### Returns
 

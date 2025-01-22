@@ -154,7 +154,8 @@ export interface Memory {
     content: Content; // The content of the memory, which can be a structured object or a plain string.
     embedding?: number[]; // An optional embedding vector representing the semantic content of the memory.
     roomId: UUID; // The room or conversation ID associated with the memory.
-    unique?: boolean; // Whether the memory is unique or not
+    kind?: string;
+    is_unique?: boolean; // Whether the memory is unique or not
 }
 
 /**
@@ -329,16 +330,21 @@ export interface IDatabaseAdapter {
     getMemories(params: {
         roomId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
         end?: number;
     }): Promise<Memory[]>;
+    getMemoriesByKind(params: {
+        kind: string;
+        count?: number;
+        agentId: UUID;
+    }): Promise<Memory[]>;
     getMemoriesByUserId(params: {
         userId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
@@ -370,7 +376,7 @@ export interface IDatabaseAdapter {
         embedding: number[];
         match_threshold: number;
         match_count: number;
-        unique: boolean;
+        is_unique: boolean;
     }): Promise<Memory[]>;
     updateGoalStatus(params: {
         goalId: UUID;
@@ -383,20 +389,20 @@ export interface IDatabaseAdapter {
             count?: number;
             roomId?: UUID;
             agentId?: UUID;
-            unique?: boolean;
+            is_unique?: boolean;
             tableName: string;
         }
     ): Promise<Memory[]>;
     createMemory(
         memory: Memory,
         tableName: string,
-        unique?: boolean
+        is_unique?: boolean
     ): Promise<void>;
     removeMemory(memoryId: UUID, tableName: string): Promise<void>;
     removeAllMemories(roomId: UUID, tableName: string): Promise<void>;
     countMemories(
         roomId: UUID,
-        unique?: boolean,
+        is_unique?: boolean,
         tableName?: string
     ): Promise<number>;
     getGoals(params: {
@@ -445,7 +451,7 @@ export interface IMemoryManager {
     getMemories(opts: {
         roomId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         agentId?: UUID;
         start?: number;
         end?: number;
@@ -453,11 +459,12 @@ export interface IMemoryManager {
     getMemoriesByUserId(opts: {
         userId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         agentId?: UUID;
         start?: number;
         end?: number;
     }): Promise<Memory[]>;
+    getMemoriesByKind(opts: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]>;
     getCachedEmbeddings(
         content: string
     ): Promise<{ embedding: number[]; levenshtein_score: number }[]>;
@@ -472,14 +479,14 @@ export interface IMemoryManager {
             match_threshold?: number;
             count?: number;
             roomId: UUID;
-            unique?: boolean;
+            is_unique?: boolean;
             agentId?: UUID;
         }
     ): Promise<Memory[]>;
-    createMemory(memory: Memory, unique?: boolean): Promise<void>;
+    createMemory(memory: Memory, is_unique?: boolean): Promise<void>;
     removeMemory(memoryId: UUID): Promise<void>;
     removeAllMemories(roomId: UUID): Promise<void>;
-    countMemories(roomId: UUID, unique?: boolean): Promise<number>;
+    countMemories(roomId: UUID, is_unique?: boolean): Promise<number>;
 }
 
 export interface IAgentRuntime {

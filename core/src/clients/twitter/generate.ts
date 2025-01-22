@@ -56,6 +56,8 @@ export class TwitterGenerationClient extends ClientBase {
                 "twitter"
             );
 
+
+
             let homeTimeline = [];
 
             if (!fs.existsSync("tweetcache")) fs.mkdirSync("tweetcache");
@@ -86,11 +88,13 @@ export class TwitterGenerationClient extends ClientBase {
                     roomId: stringToUuid("twitter_generate_room"),
                     agentId: this.runtime.agentId,
                     content: { text: "", action: "" },
+                    kind: "default", // TODO: TO change
                 },
                 {
                     twitterUserName:
                         this.runtime.getSetting("TWITTER_USERNAME"),
                     timeline: formattedHomeTimeline,
+                    tweet_kind: ""
                 }
             );
             // Generate new tweet
@@ -191,6 +195,7 @@ export class TwitterGenerationClient extends ClientBase {
                         roomId,
                         embedding: embeddingZeroVector,
                         createdAt: tweet.timestamp * 1000,
+                        kind: 'default',
                     });
                 } catch (error) {
                     console.error("Error sending tweet:", error);

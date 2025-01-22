@@ -137,7 +137,7 @@ Retrieves a list of memories by user IDs, with optional deduplication.
 | `opts`         | `Object`                                                   | `undefined`   | Options including user IDs, count, and uniqueness. |
 | `opts.count?`  | `number`                                                   | `10`          | The number of memories to retrieve.                |
 | `opts.room_id` | \`$\{string}-$\{string}-$\{string}-$\{string}-$\{string}\` | `undefined`   | The room ID to retrieve memories for.              |
-| `opts.unique?` | `boolean`                                                  | `true`        | Whether to retrieve unique memories only.          |
+| `opts.is_unique?` | `boolean`                                                  | `true`        | Whether to retrieve unique memories only.          |
 
 #### Returns
 
@@ -202,7 +202,7 @@ Searches for memories similar to a given embedding vector.
 | `opts.count?`           | `number`                                                   | The maximum number of memories to retrieve.                         |
 | `opts.match_threshold?` | `number`                                                   | The similarity threshold for matching memories.                     |
 | `opts.room_id`          | \`$\{string}-$\{string}-$\{string}-$\{string}-$\{string}\` | The room ID to retrieve memories for.                               |
-| `opts.unique?`          | `boolean`                                                  | Whether to retrieve unique memories only.                           |
+| `opts.is_unique?`          | `boolean`                                                  | Whether to retrieve unique memories only.                           |
 
 #### Returns
 

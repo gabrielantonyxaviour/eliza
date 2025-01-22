@@ -190,8 +190,8 @@ export class ClientBase extends EventEmitter {
         const cookiesFilePath = path.join(
             __dirname,
             "../../../tweetcache/" +
-                this.runtime.getSetting("TWITTER_USERNAME") +
-                "_cookies.json"
+            this.runtime.getSetting("TWITTER_USERNAME") +
+            "_cookies.json"
         );
 
         const dir = path.dirname(cookiesFilePath);
@@ -406,7 +406,7 @@ export class ClientBase extends EventEmitter {
                 for (const tweet of tweetsToSave) {
                     const roomId = stringToUuid(
                         tweet.conversationId ??
-                            "default-room-" + this.runtime.agentId
+                        "default-room-" + this.runtime.agentId
                     );
                     const tweetuserId =
                         tweet.userId === this.twitterUserId
@@ -554,10 +554,8 @@ export class ClientBase extends EventEmitter {
     async setCookiesFromArray(cookiesArray: any[]) {
         const cookieStrings = cookiesArray.map(
             (cookie) =>
-                `${cookie.key}=${cookie.value}; Domain=${cookie.domain}; Path=${cookie.path}; ${
-                    cookie.secure ? "Secure" : ""
-                }; ${cookie.httpOnly ? "HttpOnly" : ""}; SameSite=${
-                    cookie.sameSite || "Lax"
+                `${cookie.key}=${cookie.value}; Domain=${cookie.domain}; Path=${cookie.path}; ${cookie.secure ? "Secure" : ""
+                }; ${cookie.httpOnly ? "HttpOnly" : ""}; SameSite=${cookie.sameSite || "Lax"
                 }`
         );
         await this.twitterClient.setCookies(cookieStrings);
@@ -570,7 +568,7 @@ export class ClientBase extends EventEmitter {
                     roomId: message.roomId,
                     agentId: this.runtime.agentId,
                     count: 1,
-                    unique: false,
+                    is_unique: false,
                 }
             );
 

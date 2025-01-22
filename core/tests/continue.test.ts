@@ -159,7 +159,7 @@ describe("User Profile", () => {
                     roomId,
                     agentId: runtime.agentId,
                     count: finalMessageCount - initialMessageCount,
-                    unique: false,
+                    is_unique: false,
                 });
 
                 const continueMessages = agentMessages.filter(

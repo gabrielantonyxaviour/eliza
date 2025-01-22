@@ -231,7 +231,7 @@ const summarizeAction = {
             start: parseInt(start as string),
             end: parseInt(end as string),
             count: 10000,
-            unique: false,
+            is_unique: false,
         });
 
         console.log("memories", memories);

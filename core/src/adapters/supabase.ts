@@ -37,6 +37,24 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         }
     }
 
+    async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {
+        try {
+            const { data, error } = await this.supabase
+                .from("memories")
+                .select("*")
+                .eq("kind", params.kind)
+                .eq("agentId", params.agentId)
+                .order("createdAt", { ascending: false })
+                .limit(params.count ?? 10);
+
+            if (error) throw new Error(`Error getting memories by kind: ${error.message}`);
+            return data as Memory[];
+        } catch (error) {
+            console.error('Error in getMemoriesByKind:', error);
+            return [];
+        }
+    }
+
     async getParticipantsForAccount(userId: UUID): Promise<Participant[]> {
         try {
             const { data, error } = await this.supabase
@@ -201,7 +219,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         embedding: number[];
         match_threshold: number;
         match_count: number;
-        unique: boolean;
+        is_unique: boolean;
     }): Promise<Memory[]> {
         const result = await this.supabase.rpc("search_memories", {
             query_table_name: params.tableName,
@@ -209,7 +227,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             query_embedding: params.embedding,
             query_match_threshold: params.match_threshold,
             query_match_count: params.match_count,
-            query_unique: params.unique,
+            query_unique: params.is_unique,
         });
         if (result.error) {
             throw new Error(JSON.stringify(result.error));
@@ -270,7 +288,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     async getMemoriesByUserId(params: {
         userId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
@@ -290,7 +308,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
                 query.lte("createdAt", params.end);
             }
 
-            if (params.unique) {
+            if (params.is_unique) {
                 query.eq("unique", true);
             }
 
@@ -321,7 +339,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     async getMemories(params: {
         roomId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
@@ -340,7 +358,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             query.lte("createdAt", params.end);
         }
 
-        if (params.unique) {
+        if (params.is_unique) {
             query.eq("unique", true);
         }
 
@@ -385,7 +403,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
             count?: number;
             roomId?: UUID;
             agentId?: UUID;
-            unique?: boolean;
+            is_unique?: boolean;
             tableName: string;
         }
     ): Promise<Memory[]> {
@@ -396,7 +414,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
                 query_embedding: embedding,
                 query_match_threshold: params.match_threshold ?? 0.8, // Default threshold
                 query_match_count: params.count ?? 10, // Default count
-                query_unique: params.unique ?? false,
+                query_unique: params.is_unique ?? false,
                 ...(params.agentId && { query_agentId: params.agentId })
             };
 
@@ -430,6 +448,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
                     query_roomId: memory.roomId,
                     query_embedding: memory.embedding,
                     query_createdAt: createdAt,
+                    query_kind: memory.kind ?? "default",
                     similarity_threshold: 0.95,
                 };
 

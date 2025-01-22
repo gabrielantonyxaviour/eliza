@@ -279,7 +279,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
                     memory.userId,
                     memory.roomId,
                     memory.agentId,
-                    memory.unique ?? isUnique,
+                    memory.is_unique ?? isUnique,
                     Date.now(),
                 ]
             );
@@ -294,7 +294,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
         embedding: number[];
         match_threshold: number;
         match_count: number;
-        unique: boolean;
+        is_unique: boolean;
     }): Promise<Memory[]> {
         const client = await this.pool.connect();
         try {
@@ -305,7 +305,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
         WHERE type = $1 AND "roomId" = $2
       `;
 
-            if (params.unique) {
+            if (params.is_unique) {
                 sql += ` AND "unique" = true`;
             }
 
@@ -334,7 +334,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
     async getMemories(params: {
         roomId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
@@ -352,16 +352,16 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             if (params.start) {
                 paramCount++;
                 sql += ` AND "createdAt" >= to_timestamp($${paramCount})`;
-                values.push(params.start/1000);
+                values.push(params.start / 1000);
             }
 
             if (params.end) {
                 paramCount++;
                 sql += ` AND "createdAt" <= to_timestamp($${paramCount})`;
-                values.push(params.end/1000);
+                values.push(params.end / 1000);
             }
 
-            if (params.unique) {
+            if (params.is_unique) {
                 sql += ` AND "unique" = true`;
             }
 
@@ -616,7 +616,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             count?: number;
             agentId?: UUID;
             roomId?: UUID;
-            unique?: boolean;
+            is_unique?: boolean;
             tableName: string;
         }
     ): Promise<Memory[]> {
@@ -635,7 +635,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             const values: any[] = [vectorStr, params.tableName];
             let paramCount = 2;
 
-            if (params.unique) {
+            if (params.is_unique) {
                 sql += ` AND "unique" = true`;
             }
 

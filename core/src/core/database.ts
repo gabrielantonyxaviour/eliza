@@ -41,9 +41,11 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
     abstract getMemories(params: {
         roomId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
     }): Promise<Memory[]>;
+
+    abstract getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]>;
 
     /**
      * 
@@ -54,7 +56,7 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
     abstract getMemoriesByUserId(params: {
         userId: UUID;
         count?: number;
-        unique?: boolean;
+        is_unique?: boolean;
         tableName: string;
         agentId?: UUID;
         start?: number;
@@ -130,7 +132,7 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
         embedding: number[];
         match_threshold: number;
         match_count: number;
-        unique: boolean;
+        is_unique: boolean;
     }): Promise<Memory[]>;
 
     /**
@@ -156,7 +158,7 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
             count?: number;
             roomId?: UUID;
             agentId?: UUID;
-            unique?: boolean;
+            is_unique?: boolean;
             tableName: string;
         }
     ): Promise<Memory[]>;
@@ -171,7 +173,7 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
     abstract createMemory(
         memory: Memory,
         tableName: string,
-        unique?: boolean
+        is_unique?: boolean
     ): Promise<void>;
 
     /**
@@ -199,7 +201,7 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
      */
     abstract countMemories(
         roomId: UUID,
-        unique?: boolean,
+        is_unique?: boolean,
         tableName?: string
     ): Promise<number>;
 
