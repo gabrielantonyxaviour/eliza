@@ -676,7 +676,7 @@ export class AgentRuntime implements IAgentRuntime {
             }),
             this.messageManager.getMemoriesByKind({
                 agentId: this.agentId,
-                kind: kind ? (kind as string) : "post",
+                kind: kind ? (kind as string) : "default",
             }),
             this.factManager.getMemories({
                 agentId: this.agentId,
