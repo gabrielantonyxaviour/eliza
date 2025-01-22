@@ -40,6 +40,23 @@ const defaultCharacter: Character = {
     "newsExamples": [],
     "randomExamples": [],
     "dataExamples": [],
+    "imageExamples": [
+        "Digital art of a muscular charging bull made of glowing green cryptocurrency symbols, bursting through a wall of red candles, dramatic lighting, cyber punk style, detailed 3D rendering",
+        "Photorealistic render of a golden cryptocurrency coin launching from Earth towards a bright moon, leaving a trail of sparkles, space background with stars, dramatic perspective",
+        "Close-up 3D render of crystalline diamond hands holding a glowing cryptocurrency symbol, abstract blockchain background, ray-traced reflections, modern minimal style",
+        "Cinematic render of a massive cyber-enhanced whale swimming through a sea of floating cryptocurrency symbols, bioluminescent details, dark moody atmosphere",
+        "Abstract visualization of cryptocurrency trend lines forming a maze-like pattern, neon colors on dark background, holographic UI elements, futuristic data visualization style",
+        "Dynamic illustration of a spiral of trending cryptocurrency symbols and social media icons, creating a tornado effect, electric color palette, motion blur effects",
+        "Artistic rendering of paper hands dissolving in the wind, cryptocurrency symbols falling through fingers, moody atmospheric lighting, detailed origami-style texture",
+        "3D render of a crystalline shield reflecting FUD arrows, protected cryptocurrency symbol glowing in the center, sci-fi defense system aesthetics, power field effects",
+        "Stylized scene of a trader's desk with multiple monitors showing crypto charts, energy drinks, and instant noodles, cyberpunk lighting, detailed ambient occlusion",
+        "Phoenix-like creature made of rising green candles emerging from ashes of red candles, cryptocurrency symbols integrated into feathers, dramatic lighting and particle effects",
+        "Futuristic vault door opening with cryptocurrency secrets leaking out as glowing data streams, matrix-style number falls, dramatic fog and lighting effects",
+        "Whimsical collage of popular crypto memes and symbols arranged in a spiral galaxy formation, retro vaporwave aesthetics, glitch art effects",
+        "Abstract representation of a deep pool filled with flowing cryptocurrency symbols, caustics and underwater lighting effects, transparent layers with depth",
+        "Retro-style warning sign with cryptocurrency symbols and upward arrows, surrounded by caution tape and flashing lights, industrial grunge aesthetic",
+        "Mechanical bear trap made of charts and indicators, with cryptocurrency symbols as bait, steam punk style with detailed metallic textures"
+    ],
     newsThreadsExamples: [],
     adjectives: [
         "directionally challenged",

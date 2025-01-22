@@ -4,6 +4,7 @@ import Together from "together-ai";
 import { IAgentRuntime } from "../core/types.ts";
 import { getModel, ImageGenModel } from "../core/imageGenModels.ts";
 import OpenAI from "openai";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const generateImage = async (
     data: {
@@ -101,3 +102,33 @@ export const generateCaption = async (
         description: resp.description.trim(),
     };
 };
+
+export async function storeImage(base64Image: string, supabase: SupabaseClient) {
+    // Remove data URL prefix if present
+    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+
+    // Convert base64 to Buffer
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Generate unique filename
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase
+        .storage
+        .from('image_gen')
+        .upload(`tweets/${fileName}`, buffer, {
+            contentType: 'image/png'
+        });
+
+    if (error) throw error;
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase
+        .storage
+        .from('image_gen')
+        .getPublicUrl(`tweets/${fileName}`);
+
+
+    return publicUrl;
+}

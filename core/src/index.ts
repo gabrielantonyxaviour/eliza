@@ -21,6 +21,7 @@ import {
     parseArguments,
 } from "./cli/index.ts";
 import { PrettyConsole } from "./cli/colors.ts";
+import { stringToUuid } from "./core/uuid.ts";
 
 let argv: Arguments = parseArguments();
 
@@ -50,7 +51,7 @@ async function startAgent(character: Character) {
         token,
         "agentConfig.yaml"
     );
-    const directRuntime = createDirectRuntime(
+    const directRuntime = await createDirectRuntime(
         character,
         db,
         token,
@@ -58,8 +59,10 @@ async function startAgent(character: Character) {
     );
 
     const clients = await initializeClients(character, runtime);
-    directClient.registerAgent(await directRuntime);
-
+    console.log("Registering agent with direct client");
+    directClient.registerAgent(directRuntime);
+    console.log(directRuntime.agentId)
+    console.log("ALL SET")
     return clients;
 }
 
@@ -83,7 +86,7 @@ function chat() {
             return;
         }
 
-        const agentId = characters[0].name.toLowerCase();
+        const agentId = (characters[0].id ? characters[0].id.toLowerCase() : stringToUuid(characters[0].name));
         const response = await fetch(
             `http://localhost:3000/${agentId}/message`,
             {

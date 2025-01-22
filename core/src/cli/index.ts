@@ -145,6 +145,7 @@ export async function createAgentRuntime(
         databaseAdapter: db,
         token,
         modelProvider: character.modelProvider,
+        imageGenModel: character.imageGenModel,
         evaluators: [],
         character,
         providers: [
@@ -185,6 +186,7 @@ export async function createDirectRuntime(
         databaseAdapter: db,
         token,
         modelProvider: character.modelProvider,
+        imageGenModel: character.imageGenModel,
         evaluators: [],
         character,
         providers: [

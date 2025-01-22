@@ -21,6 +21,11 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         super();
         this.supabase = createClient(supabaseUrl, supabaseKey);
     }
+
+    getSupabaseClient(): SupabaseClient {
+        return this.supabase;
+    }
+
     async getRoom(roomId: UUID): Promise<UUID | null> {
         try {
             const { data, error } = await this.supabase
@@ -28,8 +33,9 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
                 .select("id")
                 .eq("id", roomId)
                 .single();
-
-            if (error) throw new Error(`Error getting room: ${error.message}`);
+            console.log("GET ROOM DATA")
+            console.log(data)
+            if (error) console.log(`Error getting room: ${error.message}`);
             return data ? (data.id as UUID) : null;
         } catch (error) {
             console.error('Error in getRoom:', error);
@@ -346,20 +352,21 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         end?: number;
     }): Promise<Memory[]> {
         const query = this.supabase
-            .from(params.tableName)
+            .from("memories")
             .select("*")
-            .eq("roomId", params.roomId);
+            .eq("roomId", params.roomId)
+            .eq("type", params.tableName);
 
         if (params.start) {
-            query.gte("createdAt", params.start);
+            query.gte("createdAt", new Date(params.start).toISOString());
         }
 
         if (params.end) {
-            query.lte("createdAt", params.end);
+            query.lte("createdAt", new Date(params.end).toISOString());
         }
 
         if (params.is_unique) {
-            query.eq("unique", true);
+            query.eq("is_unique", 1);
         }
 
         if (params.agentId) {
@@ -414,7 +421,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
                 query_embedding: embedding,
                 query_match_threshold: params.match_threshold ?? 0.8, // Default threshold
                 query_match_count: params.count ?? 10, // Default count
-                query_unique: params.is_unique ?? false,
+                query_unique: params.is_unique ?? 0,
                 ...(params.agentId && { query_agentId: params.agentId })
             };
 
@@ -438,8 +445,8 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         unique = false
     ): Promise<void> {
         try {
-            const createdAt = memory.createdAt ?? new Date().toISOString();
-
+            const createdAt = memory.createdAt ? new Date(memory.createdAt).toISOString() : new Date().toISOString();
+            console.log({ ...memory, createdAt, type: tableName });
             if (unique) {
                 const opts = {
                     query_table_name: tableName,
@@ -494,7 +501,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
 
     async countMemories(
         roomId: UUID,
-        unique = true,
+        is_unique = true,
         tableName: string
     ): Promise<number> {
         if (!tableName) {
@@ -503,7 +510,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         const query = {
             query_table_name: tableName,
             query_roomId: roomId,
-            query_unique: !!unique,
+            query_unique: is_unique ? 1 : 0,
         };
         const result = await this.supabase.rpc("count_memories", query);
 
@@ -520,16 +527,21 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         onlyInProgress?: boolean;
         count?: number;
     }): Promise<Goal[]> {
-        const opts = {
-            query_roomId: params.roomId,
-            query_userId: params.userId,
-            only_in_progress: params.onlyInProgress,
-            row_count: params.count,
-        };
 
+        console.log({
+            only_in_progress: params.onlyInProgress,
+            query_roomid: params.roomId as string,
+            query_userId: params.userId ? params.userId as string : null,
+            row_count: params.count,
+        })
         const { data: goals, error } = await this.supabase.rpc(
             "get_goals",
-            opts
+            {
+                only_in_progress: params.onlyInProgress,
+                query_roomid: params.roomId as string,
+                query_userid: params.userId ? params.userId as string : null,
+                row_count: params.count,
+            }
         );
 
         if (error) {
@@ -608,9 +620,10 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
 
     async createRoom(roomId?: UUID): Promise<UUID> {
         roomId = roomId ?? (uuid() as UUID);
-        const { data, error } = await this.supabase.rpc("create_room", {
-            roomId,
-        });
+        const { data, error } = await this.supabase.from("rooms").insert({
+            id: roomId,
+            createdAt: new Date().toISOString(),
+        }).select();
 
         if (error) {
             throw new Error(`Error creating room: ${error.message}`);

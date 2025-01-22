@@ -12,6 +12,7 @@ import { generateMessageResponse } from "../../core/generation.ts";
 import {
     generateCaption,
     generateImage,
+    storeImage,
 } from "../../actions/imageGenerationUtils.ts";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -43,6 +44,27 @@ About {{agentName}}:
 
 # Instructions: Write the next message for {{agentName}}. Ignore "action". Use lowercase. Rarely use emojis.
 ` + messageCompletionFooter;
+
+export const imageTemplate = `
+About {{agentName}}:
+{{bio}}
+{{lore}}
+
+{{providers}}
+
+{{attachments}}
+
+{{recentMessagesByKind}}
+
+{{imageExamples}}
+
+# Instructions: Use the examples as reference and generate a image generation prompt along with an caption for {{agentName}}. Don't use a prompt that is used already. use lowercase only for caption.
+
+\nResponse format should be formatted in a JSON block like this:
+\`\`\`json
+{ "user": "{{agentName}}", "prompt": string, "caption": string }
+\`\`\`
+`
 
 export const randomTemplate = `
 About {{agentName}}:
@@ -151,6 +173,12 @@ class DirectClient {
             "/:agentId/message",
             async (req: express.Request, res: express.Response) => {
                 const agentId = req.params.agentId;
+                const agent = this.agents.get(agentId);
+                console.log(agentId)
+                if (!agent) {
+                    res.status(404).send("Agent not found");
+                    return;
+                }
                 const roomId = stringToUuid(
                     req.body.roomId ?? "default-room-" + agentId
                 );
@@ -206,11 +234,11 @@ class DirectClient {
                     createdAt: Date.now(),
                 };
 
-
                 await runtime.messageManager.createMemory(memory);
 
                 const state = (await runtime.composeState(userMessage, {
                     agentName: runtime.character.name,
+                    kind: text,
                 })) as State;
 
                 let context;
@@ -222,11 +250,57 @@ class DirectClient {
                         state,
                         template: newsTemplate,
                     });
-                else if (text == 'image')
+                else if (text == 'image') {
                     context = composeContext({
                         state,
-                        template: messageHandlerTemplate,
+                        template: imageTemplate,
                     });
+
+                    const response: any = await generateMessageResponse({
+                        runtime: runtime,
+                        context,
+                        modelClass: ModelClass.SMALL,
+                    });
+
+                    const images = await generateImage({
+                        prompt: response.prompt,
+                        width: 1200,
+                        height: 675,
+                        count: 1
+                    }, agent);
+
+                    const imageUrl = await storeImage(images.data[0], agent.databaseAdapter.getSupabaseClient());
+                    const imageRes = {
+                        image: imageUrl,
+                        caption: response.caption
+                    }
+
+
+
+                    if (images.data.length == 0) {
+                        res.status(500).send(
+                            "No response from generateMessageResponse"
+                        );
+                        return;
+                    }
+
+
+                    const memeoryResponse: Memory = {
+                        id: stringToUuid(Date.now().toString()),
+                        agentId: runtime.agentId,
+                        roomId: roomId,
+                        userId: runtime.agentId,
+                        content: { text: imageRes.caption, image: imageRes.image, },
+                        createdAt: Date.now(),
+                        kind: "image",
+                    }
+
+                    await runtime.messageManager.createMemory(memeoryResponse)
+
+                    res.json({ images: imageRes });
+                    return;
+                }
+
 
                 else if (text == 'data') context = composeContext({
                     state, template: randomTemplate
@@ -244,9 +318,12 @@ class DirectClient {
 
                 // save response to memory
                 const responseMessage = {
-                    ...userMessage,
+                    id: stringToUuid(Date.now().toString()),
+                    agentId: runtime.agentId,
+                    roomId: roomId,
                     userId: runtime.agentId,
                     content: response,
+                    createdAt: Date.now(),
                 };
 
                 await runtime.messageManager.createMemory(responseMessage);

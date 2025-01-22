@@ -1,5 +1,6 @@
 import { Readable } from "stream";
 import { ImageGenModel } from "./imageGenModels.ts";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Represents a UUID, which is a universally unique identifier conforming to the UUID standard.
@@ -301,6 +302,7 @@ export type Character = {
     dataExamples: string[];
     newsExamples: string[];
     randomExamples: string[];
+    imageExamples: string[];
     newsThreadsExamples: string[][];
     people: string[];
     topics: string[];
@@ -325,6 +327,7 @@ export type Character = {
 
 export interface IDatabaseAdapter {
     db: any;
+    getSupabaseClient?(): SupabaseClient;
     getAccountById(userId: UUID): Promise<Account | null>;
     createAccount(account: Account): Promise<boolean>;
     getMemories(params: {

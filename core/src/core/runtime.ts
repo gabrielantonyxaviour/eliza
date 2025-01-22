@@ -215,6 +215,10 @@ export class AgentRuntime implements IAgentRuntime {
             throw new Error("No database adapter provided");
         }
 
+        if (!opts.imageGenModel) {
+            throw new Error("No image generation model provided");
+        }
+
         this.messageManager = new MemoryManager({
             runtime: this,
             tableName: "messages",
@@ -253,10 +257,7 @@ export class AgentRuntime implements IAgentRuntime {
         if (!this.serverUrl) {
             console.warn("No serverUrl provided, defaulting to localhost");
         }
-        this.imageGenModel =
-            this.character.imageGenModel ??
-            opts.imageGenModel ??
-            this.imageGenModel;
+        this.imageGenModel = opts.imageGenModel;
 
         this.token = opts.token;
 
@@ -724,6 +725,7 @@ export class AgentRuntime implements IAgentRuntime {
             actors: actorsData,
         })
 
+
         const recentPosts = formatPosts({
             messages: recentMessagesData,
             actors: actorsData,
@@ -807,6 +809,12 @@ Text: ${attachment.text}
             })
             .slice(0, 50)
             .join("\n");
+
+        const formattedImageExamples = this.character.imageExamples.sort(() => 0.5 - Math.random()).map((post) => {
+            const messageString = `${post}`;
+            return messageString;
+        }
+        ).slice(0, 10).join("\n");
 
         const formattedDataExamples = this.character.dataExamples.sort(() => 0.5 - Math.random())
             .map((post) => {
@@ -1055,6 +1063,16 @@ Text: ${attachment.text}
                         formattedNewsExamples
                     )
                     : "",
+
+            imageExamples: formattedImageExamples &&
+                formattedImageExamples.replaceAll("\n", "").length >
+                0
+                ? addHeader(
+                    `# Example Image Prompts for ${this.character.name}`,
+                    formattedImageExamples
+                )
+                : "",
+
             spamMessageExamples:
                 formattedSpamMessageExamples &&
                     formattedSpamMessageExamples.replaceAll("\n", "").length >
@@ -1132,6 +1150,7 @@ Text: ${attachment.text}
                     )
                     : "",
             goalsData,
+
             recentMessages:
                 recentMessages && recentMessages.length > 0
                     ? addHeader("# Conversation Messages", recentMessages)
