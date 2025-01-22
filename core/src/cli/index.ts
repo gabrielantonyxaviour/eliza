@@ -126,7 +126,7 @@ export function initializeDatabase() {
 export function initializeSupabase() {
     return new Adapter.SupabaseDatabaseAdapter(
         process.env.SUPABASE_URL,
-        process.env.SUPABASE_KEY,
+        process.env.SUPABASE_ANON_KEY,
     );
 }
 

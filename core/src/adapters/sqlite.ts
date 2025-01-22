@@ -56,6 +56,21 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
         return res?.userState ?? null;
     }
 
+    async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {
+        const sql = `
+      SELECT * FROM memories WHERE type = ? AND agentId = ?
+      ORDER BY createdAt DESC
+    `;
+
+        const stmt = this.db.prepare(sql);
+        const rows = stmt.all(params.kind, params.agentId) as Memory[];
+
+        return rows.map((row) => ({
+            ...row,
+            content: JSON.parse(row.content as unknown as string),
+        }));
+    }
+
     async setParticipantUserState(
         roomId: UUID,
         userId: UUID,

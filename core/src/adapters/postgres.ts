@@ -69,6 +69,71 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
         }
     }
 
+    async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {
+        const client = await this.pool.connect();
+        try {
+            const { rows } = await client.query(
+                `SELECT * FROM memories WHERE type = $1 AND "agentId" = $2`,
+                [params.kind, params.agentId]
+            );
+            return rows.map((row) => ({
+                ...row,
+                content: JSON.parse(row.content),
+            }));
+        } finally {
+            client.release();
+        }
+    }
+
+    async getMemoriesByUserId(params: { userId: UUID; count?: number; is_unique?: boolean; tableName: string; agentId?: UUID; start?: number; end?: number; }): Promise<Memory[]> {
+        const client = await this.pool.connect();
+        try {
+            let sql = `SELECT * FROM memories WHERE type = $1 AND "userId" = $2`;
+            const values: any[] = [params.tableName, params.userId];
+            let paramCount = 2;
+
+            if (params.start) {
+                paramCount++;
+                sql += ` AND "createdAt" >= to_timestamp($${paramCount})`;
+                values.push(params.start / 1000);
+            }
+
+            if (params.end) {
+                paramCount++;
+                sql += ` AND "createdAt" <= to_timestamp($${paramCount})`;
+                values.push(params.end / 1000);
+            }
+
+            if (params.is_unique) {
+                sql += ` AND "unique" = true`;
+            }
+
+            if (params.agentId) {
+                sql += " AND agentId = $3";
+                values.push(params.agentId);
+            }
+
+            sql += ' ORDER BY "createdAt" DESC';
+
+            if (params.count) {
+                paramCount++;
+                sql += ` LIMIT $${paramCount}`;
+                values.push(params.count);
+            }
+
+            const { rows } = await client.query(sql, values);
+            return rows.map((row) => ({
+                ...row,
+                content:
+                    typeof row.content === "string"
+                        ? JSON.parse(row.content)
+                        : row.content,
+            }));
+        } finally {
+            client.release();
+        }
+    }
+
     async getParticipantsForAccount(userId: UUID): Promise<Participant[]> {
         const client = await this.pool.connect();
         try {

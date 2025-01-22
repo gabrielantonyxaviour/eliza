@@ -41,6 +41,22 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
         return participants;
     }
 
+    async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {
+        const sql = `SELECT * FROM memories WHERE type = ? AND agentId = ? ORDER BY createdAt DESC LIMIT ?`;
+        const stmt = this.db.prepare(sql);
+        stmt.bind([params.kind, params.agentId, params.count]);
+        const memories: Memory[] = [];
+        while (stmt.step()) {
+            const memory = stmt.getAsObject() as unknown as Memory;
+            memories.push({
+                ...memory,
+                content: JSON.parse(memory.content as unknown as string),
+            });
+        }
+        stmt.free();
+        return memories;
+    }
+
     async getParticipantUserState(
         roomId: UUID,
         userId: UUID
