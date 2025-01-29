@@ -1,6 +1,7 @@
 export enum ImageGenModel {
     TogetherAI = "TogetherAI",
     Dalle = "Dalle",
+    Heurist = "Heurist",
 }
 
 const imageGenModels = {
@@ -11,6 +12,10 @@ const imageGenModels = {
     [ImageGenModel.Dalle]: {
         steps: 0,
         subModel: "dall-e-3",
+    },
+    [ImageGenModel.Heurist]: {
+        steps: 0,
+        subModel: "FLUX.1-dev",
     },
 };
 

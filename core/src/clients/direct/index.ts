@@ -275,15 +275,12 @@ class DirectClient {
                         caption: response.caption
                     }
 
-
-
                     if (images.data.length == 0) {
                         res.status(500).send(
                             "No response from generateMessageResponse"
                         );
                         return;
                     }
-
 
                     const memeoryResponse: Memory = {
                         id: stringToUuid(Date.now().toString()),

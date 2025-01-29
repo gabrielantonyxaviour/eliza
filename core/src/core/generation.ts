@@ -12,6 +12,7 @@ import { default as tiktoken, TiktokenModel } from "tiktoken";
 import models from "./models.ts";
 
 import { generateText as aiGenerateText } from "ai";
+import ollama from 'ollama'
 
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { prettyConsole } from "../index.ts";
@@ -114,7 +115,20 @@ export async function generateText({
                 prettyConsole.log("Received response from OpenAI model.");
                 break;
             }
-
+            case ModelProvider.DEEPSEEK:
+                prettyConsole.log("Using DeepSeek model for text completion.");
+                response = (await ollama.chat({
+                    model: "deepseek-r1:32b", // Replace with your model name
+                    messages: [{ role: "user", content: context }],
+                    options: {
+                        num_predict: max_response_length,
+                        temperature: temperature,
+                        frequency_penalty: frequency_penalty,
+                        presence_penalty: presence_penalty,
+                    }
+                })).message.content;
+                prettyConsole.log("Received response from DeepSeek model.");
+                break;
             case ModelProvider.ANTHROPIC: {
                 prettyConsole.log("Initializing Anthropic model.");
 
@@ -168,6 +182,7 @@ export async function generateText({
                 );
                 prettyConsole.log("Received response from local Llama model.");
                 break;
+
 
             default: {
                 const errorMessage = `Unsupported provider: ${provider}`;

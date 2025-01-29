@@ -59,10 +59,8 @@ async function startAgent(character: Character) {
     );
 
     const clients = await initializeClients(character, runtime);
-    console.log("Registering agent with direct client");
     directClient.registerAgent(directRuntime);
-    console.log(directRuntime.agentId)
-    console.log("ALL SET")
+
     return clients;
 }
 

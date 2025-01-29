@@ -5,7 +5,7 @@ import { IAgentRuntime } from "../core/types.ts";
 import { getModel, ImageGenModel } from "../core/imageGenModels.ts";
 import OpenAI from "openai";
 import { SupabaseClient } from "@supabase/supabase-js";
-
+import Heurist from 'heurist'
 export const generateImage = async (
     data: {
         prompt: string;
@@ -30,7 +30,8 @@ export const generateImage = async (
     const apiKey =
         imageGenModel === ImageGenModel.TogetherAI
             ? runtime.getSetting("TOGETHER_API_KEY")
-            : runtime.getSetting("OPENAI_API_KEY");
+
+            : imageGenModel === ImageGenModel.Heurist ? runtime.getSetting("HEURIST_API_KEY") : runtime.getSetting("OPENAI_API_KEY");
 
     try {
         if (imageGenModel === ImageGenModel.TogetherAI) {
@@ -60,6 +61,42 @@ export const generateImage = async (
                 })
             );
             return { success: true, data: base64s };
+        } else if (imageGenModel === ImageGenModel.Heurist) {
+            const heurist = new Heurist({
+                apiKey: apiKey
+            })
+            const response = await heurist.images.generate({
+                model: model.subModel,
+                prompt,
+                width,
+                height,
+                num_iterations: model.steps,
+            });
+            const imageResponse = await fetch(response.url)
+            const imageBlob = await imageResponse.blob();
+
+            const base64String = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onloadend = () => {
+                    // Ensure the string has the data:image/png;base64, prefix
+                    let result = reader.result as string;
+                    if (!result.startsWith('data:image')) {
+                        result = `data:image/png;base64,${result.split(',')[1]}`;  // Add the prefix
+                    }
+                    resolve(result);
+                };
+
+                reader.onerror = (error) => {
+                    reject(error);
+                };
+
+                reader.readAsDataURL(imageBlob);  // Read the blob as Base64
+            });
+
+            // Return the success object with the Base64 string
+            return { success: true, data: [base64String] };
+
         } else {
             let targetSize = `${width}x${height}`;
             if (
@@ -77,6 +114,7 @@ export const generateImage = async (
                 n: count,
                 response_format: "b64_json",
             });
+
             const base64s = response.data.map(
                 (image) => `data:image/png;base64,${image.b64_json}`
             );

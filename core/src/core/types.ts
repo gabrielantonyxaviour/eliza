@@ -108,6 +108,7 @@ export enum ModelProvider {
     GOOGLE = "google",
     CLAUDE_VERTEX = "claude_vertex",
     HEURIST = "heurist",
+    DEEPSEEK = "deepseek"
 }
 
 /**

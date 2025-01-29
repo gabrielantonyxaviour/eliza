@@ -151,9 +151,7 @@ export async function createAgentRuntime(
         providers: [
             Provider.timeProvider,
             Provider.boredomProvider,
-            Provider.tokenProvider,
-            Provider.walletProvider,
-            Provider.orderBookProvider,
+            Provider.newsProvider
         ],
         actions: [
             // Default actions

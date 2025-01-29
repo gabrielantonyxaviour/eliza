@@ -1,3 +1,4 @@
+import settings from "./settings.ts";
 import { Model, ModelProvider, ModelClass } from "./types.ts";
 
 type Models = {
@@ -9,6 +10,7 @@ type Models = {
     [ModelProvider.GOOGLE]: Model;
     [ModelProvider.CLAUDE_VERTEX]: Model;
     [ModelProvider.HEURIST]: Model;
+    [ModelProvider.DEEPSEEK]: Model;
     // TODO: add OpenRouter - feel free to do this :)
 };
 
@@ -45,6 +47,22 @@ const models: Models = {
             [ModelClass.LARGE]: "gpt-4o",
             [ModelClass.EMBEDDING]: "text-embedding-3-small",
         },
+    },
+    [ModelProvider.DEEPSEEK]: {
+        endpoint: "",
+        settings: {
+            stop: [],
+            maxInputTokens: 128000,
+            maxOutputTokens: 8192,
+            frequency_penalty: 0.0,
+            presence_penalty: 0.0,
+            temperature: 0.6,
+        }, model: {
+            [ModelClass.SMALL]: "deepseek-r1:32b",
+            [ModelClass.MEDIUM]: "deepseek-r1:32b",
+            [ModelClass.LARGE]: "deepseek-r1:32b",
+            [ModelClass.EMBEDDING]: "deepseek-r1:32b",
+        }
     },
     [ModelProvider.ANTHROPIC]: {
         settings: {
