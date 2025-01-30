@@ -53,7 +53,7 @@ About {{agentName}}:
 
 {{randomExamples}}
 
-# Instructions: Use the examples as reference and generate a random tweet for {{agentName}}. Don't post a news that is already posted in recent posts. Use lowercase. Rarely use emojis.
+# Instructions: Use the examples as reference and generate a random tweet for {{agentName}}. Don't post a news that is already posted in recent posts. Use lowercase. Rarely use emojis. No hashtags.
 ` + messageCompletionFooter;
 
 const newsTemplate = `
@@ -82,7 +82,7 @@ About {{agentName}}:
 
 {{newsExamples}}
 
-# Instructions: Use the examples as reference for tweet format (DO NOT use the Example Posts as source of data. They are just examples.) and choose the most trending memecoin provided by the Top Crypto News or Crypto Twitter which is relevant based on the bio and lore of {{agentName}}. Don't post a news that is already posted in recent posts.  Use lowercase. Rarely use emojis.
+# Instructions: Use the examples as reference for tweet format (DO NOT use the Example Posts as source of data. They are just examples.) and choose the most trending memecoin provided by the Top Crypto News or Crypto Twitter which is relevant based on the bio and lore of {{agentName}}. Don't post a news that is already posted in recent posts.  Use lowercase. Rarely use emojis. No hashtags.
 `
 
 const dataThreadExample = `

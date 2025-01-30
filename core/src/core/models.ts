@@ -58,8 +58,8 @@ const models: Models = {
             presence_penalty: 0.0,
             temperature: 0.6,
         }, model: {
-            [ModelClass.SMALL]: "deepseek-r1:32b",
-            [ModelClass.MEDIUM]: "deepseek-r1:32b",
+            [ModelClass.SMALL]: "deepseek-r1:8b",
+            [ModelClass.MEDIUM]: "deepseek-r1:8b",
             [ModelClass.LARGE]: "deepseek-r1:32b",
             [ModelClass.EMBEDDING]: "deepseek-r1:32b",
         }

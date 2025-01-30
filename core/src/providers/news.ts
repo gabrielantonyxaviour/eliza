@@ -139,7 +139,6 @@ class NewsProvider {
     private calculateSentiment(
         votes: CryptoPanicRawResponse["results"][0]["votes"]
     ): number {
-        console.log(votes)
         if (!votes) return 0
         return (
             (votes.positive ? votes.positive * 2 : 0) +

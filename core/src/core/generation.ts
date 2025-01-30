@@ -118,7 +118,7 @@ export async function generateText({
             case ModelProvider.DEEPSEEK:
                 prettyConsole.log("Using DeepSeek model for text completion.");
                 response = (await ollama.chat({
-                    model: "deepseek-r1:32b", // Replace with your model name
+                    model,
                     messages: [{ role: "user", content: context }],
                     options: {
                         num_predict: max_response_length,

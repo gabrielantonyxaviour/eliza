@@ -73,29 +73,16 @@ export const generateImage = async (
                 num_iterations: model.steps,
             });
             const imageResponse = await fetch(response.url)
-            const imageBlob = await imageResponse.blob();
+            const imageBuffer = await imageResponse.arrayBuffer();
 
-            const base64String = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
+            const base64String = Buffer.from(imageBuffer).toString('base64');
 
-                reader.onloadend = () => {
-                    // Ensure the string has the data:image/png;base64, prefix
-                    let result = reader.result as string;
-                    if (!result.startsWith('data:image')) {
-                        result = `data:image/png;base64,${result.split(',')[1]}`;  // Add the prefix
-                    }
-                    resolve(result);
-                };
-
-                reader.onerror = (error) => {
-                    reject(error);
-                };
-
-                reader.readAsDataURL(imageBlob);  // Read the blob as Base64
-            });
+            // Ensure correct Base64 format with data prefix
+            const base64WithPrefix = `data:image/png;base64,${base64String}`;
 
             // Return the success object with the Base64 string
-            return { success: true, data: [base64String] };
+            return { success: true, data: [base64WithPrefix] };
+
 
         } else {
             let targetSize = `${width}x${height}`;

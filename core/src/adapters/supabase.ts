@@ -389,6 +389,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     }
 
     async getMemoryById(memoryId: UUID): Promise<Memory | null> {
+        console.log(memoryId)
         const { data, error } = await this.supabase
             .from("memories")
             .select("*")
