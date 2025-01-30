@@ -133,10 +133,9 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
     async getMemoriesByRoomIds(params: {
         roomIds: UUID[];
         agentId?: UUID;
-        tableName: string;
     }): Promise<Memory[]> {
         let query = this.supabase
-            .from(params.tableName)
+            .from("memories")
             .select("*")
             .in("roomId", params.roomIds);
 
