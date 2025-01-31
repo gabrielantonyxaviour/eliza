@@ -9,6 +9,8 @@ import {
     type UUID,
     Participant,
     Room,
+    Mention,
+    DeadTicker,
 } from "../core/types.ts";
 import { DatabaseAdapter } from "../core/database.ts";
 import { v4 as uuid } from "uuid";
@@ -95,6 +97,49 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         }
 
         return data?.userState as "FOLLOWED" | "MUTED" | null;
+    }
+
+    async getTrendingMentions(): Promise<Mention[]> {
+        try {
+            const { data, error } = await this.supabase
+                .rpc('get_trending_mentions');
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error getting trending mentions:', error);
+            throw error;
+        }
+    }
+
+    async getAggregatedMentions(): Promise<Mention[]> {
+        try {
+            const { data, error } = await this.supabase
+                .rpc('get_aggregated_mentions');
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error getting aggregated mentions:', error);
+            throw error;
+        }
+    }
+
+    async updateDeadTickers(tickerData: DeadTicker[]): Promise<void> {
+        try {
+            const { error } = await this.supabase
+                .from('tickers')
+                .upsert(tickerData).select()
+
+            if (error) {
+                console.error('Error upserting data into Supabase:', error);
+            } else {
+                console.log('Data successfully upserted into Supabase');
+            }
+        } catch (error) {
+            console.error('Error upserting dead mentions:', error);
+            throw error;
+        }
     }
 
     async setParticipantUserState(

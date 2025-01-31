@@ -23,3 +23,22 @@ export async function getProviders(
 
     return providerResults.join("\n");
 }
+
+
+export async function getProvidersByIndex(
+    runtime: IAgentRuntime,
+    message: Memory,
+    indices: number[],
+    state?: State
+): Promise<string> {
+    const providerResults = await Promise.all(
+        indices.map(async (index) => {
+            if (index < 0 || index >= runtime.providers.length) {
+                throw new Error(`Provider index ${index} out of bounds`);
+            }
+            return await runtime.providers[index].get(runtime, message, state);
+        })
+    )
+
+    return providerResults.join('\n');
+}

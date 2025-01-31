@@ -161,6 +161,23 @@ export interface Memory {
 }
 
 /**
+ * Represents a mention, including the name of the mention and the count of occurrences.
+ */
+export interface Mention {
+    mention: string; // The name of the mention.
+    count: string; // The count of occurrences of the mention.
+}
+
+/**
+ * Represents a ticker that is marked as dead.
+ */
+export interface DeadTicker {
+    name: string;
+    posted_at: Date;
+    is_dead: boolean;
+}
+
+/**
  * Represents an example of a message, typically used for demonstrating or testing purposes, including optional content and action.
  */
 export interface MessageExample {
@@ -355,6 +372,9 @@ export interface IDatabaseAdapter {
         end?: number;
     }): Promise<Memory[]>;
     getMemoryById(id: UUID): Promise<Memory | null>;
+    getTrendingMentions(): Promise<Mention[]>;
+    getAggregatedMentions(): Promise<Mention[]>;
+    updateDeadTickers(tickerData: DeadTicker[]): Promise<void>;
     getMemoriesByRoomIds(params: {
         agentId?: UUID;
         roomIds: UUID[];

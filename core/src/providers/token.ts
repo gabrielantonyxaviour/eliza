@@ -23,24 +23,39 @@ const PROVIDER_CONFIG = {
     RETRY_DELAY: 2000,
     DEFAULT_RPC: "https://api.mainnet-beta.solana.com",
     TOKEN_ADDRESSES: {
-        SOL: "So11111111111111111111111111111111111111112",
-        BTC: "qfnqNqs3nCAHjnyCgLRDbBtq4p2MtHZxw8YjSyYhPoL",
-        ETH: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
-        ZOROX: "BQ6yqeqDinHtTUHH4JMzUAZ1MqGdNzcu9sDVcLrmpump",
+        "BQ6yqeqDinHtTUHH4JMzUAZ1MqGdNzcu9sDVcLrmpump": {
+            name: "ZOROX",
+            chain: "solana"
+        },
+        "HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC": {
+            name: "AI16Z",
+            chain: "solana"
+        },
+        "So11111111111111111111111111111111111111112": {
+            name: "SOL",
+            chain: "solana"
+        },
+        "qfnqNqs3nCAHjnyCgLRDbBtq4p2MtHZxw8YjSyYhPoL": {
+            name: "BTC",
+            chain: "solana"
+        },
+        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+            name: "ETH",
+            chain: "ethereum"
+        },
     },
     TOKEN_SECURITY_ENDPOINT: "/defi/token_security?address=",
     TOKEN_TRADE_DATA_ENDPOINT: "/defi/v3/token/trade-data/single?address=",
     DEX_SCREENER_API: "https://api.dexscreener.com/latest/dex/tokens/",
 };
 
+
 export class TokenProvider {
     private cache: NodeCache;
     private cacheDir: string;
 
-    constructor(
-        //  private connection: Connection,
-        private tokenAddress: string
-    ) {
+
+    constructor(private tokenAddress: string, private chain: string) {
         this.cache = new NodeCache({ stdTTL: 300 }); // 5 minutes cache
         const __dirname = path.resolve();
         this.cacheDir = path.join(__dirname, "cache");
@@ -110,23 +125,26 @@ export class TokenProvider {
     private async fetchWithRetry(
         url: string,
         options: RequestInit = {}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ): Promise<any> {
         let lastError: Error;
 
         for (let i = 0; i < PROVIDER_CONFIG.MAX_RETRIES; i++) {
             try {
-                console.log("URL");
-                console.log(url);
-                console.log("AIPI KEY");
-                console.log(settings);
+                const headers = {
+                    "x-chain": this.chain,
+                    Accept: "application/json",
+                    "X-API-KEY": settings.BIRDEYE_API_KEY || "",
+                    ...options.headers
+                };
+
+                console.log(url)
+                console.log({
+                    ...options,
+                    headers
+                })
                 const response = await fetch(url, {
                     ...options,
-                    headers: {
-                        "x-chain": "solana",
-                        Accept: "application/json",
-                        "X-API-KEY": settings.BIRDEYE_API_KEY || "",
-                    },
+                    headers
                 });
 
                 if (!response.ok) {
@@ -142,53 +160,14 @@ export class TokenProvider {
                 console.error(`Attempt ${i + 1} failed:`, error);
                 lastError = error as Error;
                 if (i < PROVIDER_CONFIG.MAX_RETRIES - 1) {
-                    const delay = PROVIDER_CONFIG.RETRY_DELAY * Math.pow(2, i);
-                    console.log(`Waiting ${delay}ms before retrying...`);
-                    await new Promise((resolve) => setTimeout(resolve, delay));
-                    continue;
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, PROVIDER_CONFIG.RETRY_DELAY * Math.pow(2, i))
+                    );
                 }
             }
         }
 
-        console.error(
-            "All attempts failed. Throwing the last error:",
-            lastError
-        );
         throw lastError;
-    }
-
-    async fetchTokenPriceData(): Promise<TokenPriceData> {
-        const cacheKey = `tokenPrice_${this.tokenAddress}`;
-        const cachedData = this.getCachedData<TokenPriceData>(cacheKey);
-        if (cachedData) {
-            console.log(
-                `Returning cached token price data for ${this.tokenAddress}.`
-            );
-            return cachedData;
-        }
-        const currentTime = Math.floor(Date.now() / 1000);
-        const url = `https://public-api.birdeye.so/defi/history_price?address=${this.tokenAddress}&address_type=token&type=1H&time_from=${currentTime - 24 * 60 * 60}&time_to=${currentTime}`;
-        const options = {
-            method: "GET",
-            headers: {
-                accept: "application/json",
-                "X-API-KEY": settings.BIRDEYE_API_KEY || "",
-            },
-        };
-        const tokenPriceResponse = await fetch(url, options);
-        const tokenPriceData = await tokenPriceResponse.json();
-        const tokenPrices = tokenPriceData.data.items.map(
-            (i: { address: string; unixTime: number; value: number }) => {
-                return {
-                    timestmap: i.unixTime,
-                    value: i.value,
-                };
-            }
-        );
-        this.setCachedData(cacheKey, tokenPrices);
-        console.log(`TokenPrice Data cached for ${this.tokenAddress}`);
-
-        return { prices: tokenPrices };
     }
 
     async fetchTokenSecurity(): Promise<TokenSecurityData> {
@@ -205,7 +184,7 @@ export class TokenProvider {
         const data = await this.fetchWithRetry(url, {
             method: "GET",
             headers: {
-                "x-chain": "solana", // TODO: Need to change based on chain
+                "x-chain": PROVIDER_CONFIG.TOKEN_ADDRESSES[this.tokenAddress].chain,
             },
         });
 
@@ -243,9 +222,12 @@ export class TokenProvider {
             headers: {
                 accept: "application/json",
                 "X-API-KEY": settings.BIRDEYE_API_KEY || "",
+                'x-chain': PROVIDER_CONFIG.TOKEN_ADDRESSES[this.tokenAddress].chain,
             },
         };
 
+        console.log(url)
+        console.log(options)
         const data = await fetch(url, options)
             .then((res) => res.json())
             .catch((err) => console.error(err));
@@ -708,12 +690,6 @@ export class TokenProvider {
             console.log(`Fetching trade data for token: ${this.tokenAddress}`);
             const tradeData = await this.fetchTokenTradeData();
 
-            // console.log(
-            //     `Fetching historical price data for token: ${this.tokenAddress}`
-            // );
-
-            // const priceData = await this.fetchTokenPriceData();
-
             console.log(
                 `Fetching DexScreener data for token: ${this.tokenAddress}`
             );
@@ -884,21 +860,37 @@ export class TokenProvider {
             return "Unable to fetch token information. Please try again later.";
         }
     }
+
+    static async getAllTokenReports(): Promise<string> {
+        const tokenReports: string[] = [];
+
+        for (const tokenAddress of Object.keys(PROVIDER_CONFIG.TOKEN_ADDRESSES)) {
+            const tokenConfig = PROVIDER_CONFIG.TOKEN_ADDRESSES[tokenAddress];
+            console.log(`Processing ${tokenConfig.symbol}...`);
+
+            try {
+                const provider = new TokenProvider(tokenAddress, tokenConfig.chain);
+                const report = await provider.getFormattedTokenReport();
+                tokenReports.push(`\n=== ${tokenConfig.symbol} Report ===\n${report}`);
+            } catch (error) {
+                console.error(`Error processing ${tokenConfig.symbol}:`, error);
+                tokenReports.push(`\n=== ${tokenConfig.symbol} Report ===\nError fetching data for ${tokenConfig.symbol}`);
+            }
+        }
+
+        return tokenReports.join('\n\n');
+    }
 }
 
-const tokenAddress = PROVIDER_CONFIG.TOKEN_ADDRESSES.ZOROX;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const connection = new Connection(PROVIDER_CONFIG.DEFAULT_RPC);
+
 const tokenProvider: Provider = {
     get: async (
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         runtime: IAgentRuntime,
         _message: Memory,
         _state?: State
     ): Promise<string> => {
         try {
-            const provider = new TokenProvider(tokenAddress);
-            return provider.getFormattedTokenReport();
+            return TokenProvider.getAllTokenReports();
         } catch (error) {
             console.error("Error fetching token data:", error);
             return "Unable to fetch token information. Please try again later.";

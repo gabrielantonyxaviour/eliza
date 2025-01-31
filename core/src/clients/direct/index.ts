@@ -92,6 +92,8 @@ About {{agentName}}:
 # Instructions: Use the examples as reference for tweet format (DO NOT use the Example Posts as source of data. They are just examples.) and choose a news provided by the Top Crypto News or Crypto Twitter which is relevant based on the bio and lore of {{agentName}}. Don't post a news that is already posted in recent posts.  Use lowercase. Rarely use emojis.
 ` + messageCompletionFooter;
 
+export const dataTemplate = `` + messageCompletionFooter;
+
 
 export interface SimliClientConfig {
     apiKey: string;
@@ -298,9 +300,8 @@ class DirectClient {
                     return;
                 }
 
-
                 else if (text == 'data') context = composeContext({
-                    state, template: randomTemplate
+                    state, template: dataTemplate
                 });
                 else context = composeContext({
                     state,
@@ -310,7 +311,7 @@ class DirectClient {
                 const response = await generateMessageResponse({
                     runtime: runtime,
                     context,
-                    modelClass: text == 'data' ? ModelClass.LARGE : ModelClass.LARGE,
+                    modelClass: ModelClass.LARGE,
                 });
 
                 // save response to memory

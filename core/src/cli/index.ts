@@ -189,8 +189,10 @@ export async function createDirectRuntime(
         character,
         providers: [
             Provider.timeProvider,
-            Provider.boredomProvider,
+            Provider.tokenProvider,
             Provider.newsProvider,
+            Provider.tiktokProvider,
+            // Provider.twitterProvider,
         ],
         actions: [
             ...defaultActions,

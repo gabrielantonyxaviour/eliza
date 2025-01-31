@@ -50,7 +50,7 @@ import { generateText, splitChunks } from "./generation.ts";
 import { formatGoalsAsString, getGoals } from "./goals.ts";
 import { formatActors, formatMessages, getActorDetails } from "./messages.ts";
 import { formatAgentPosts, formatPosts } from "./posts.ts";
-import { defaultProviders, getProviders } from "./providers.ts";
+import { defaultProviders, getProviders, getProvidersByIndex } from "./providers.ts";
 import settings from "./settings.ts";
 import { UUID, type Actor } from "./types.ts";
 import { stringToUuid } from "./uuid.ts";
@@ -1205,9 +1205,8 @@ Text: ${attachment.text}
             await Promise.all([
                 Promise.all(evaluatorPromises),
                 Promise.all(actionPromises),
-                getProviders(this, message, initialState),
+                kind == 'data' ? getProvidersByIndex(this, message, [0, 3], initialState) : kind == 'news' ? getProvidersByIndex(this, message, [0, 2], initialState) : kind == 'token' ? getProvidersByIndex(this, message, [0, 1], initialState) : ''
             ]);
-
         const evaluatorsData = resolvedEvaluators.filter(
             Boolean
         ) as Evaluator[];
