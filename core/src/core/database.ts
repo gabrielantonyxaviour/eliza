@@ -8,6 +8,8 @@ import {
     type UUID,
     Participant,
     IDatabaseAdapter,
+    Mention,
+    DeadTicker,
 } from "./types.ts";
 
 /**
@@ -62,6 +64,25 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
         start?: number;
         end?: number;
     }): Promise<Memory[]>;
+
+    /**
+     * Retrieves trending mentions from the database.
+     * @returns A Promise that resolves to an array of Mention objects.
+     */
+    abstract getTrendingMentions(): Promise<Mention[]>;
+
+    /**
+     * Retrieves aggregated mentions from the database.
+     * @returns A Promise that resolves to an array of Mention objects.
+     */
+    abstract getAggregatedMentions(): Promise<Mention[]>;
+
+    /**
+     * Updates dead tickers in the database.
+     * @param tickerData An array of DeadTicker objects to upsert.
+     * @returns A Promise that resolves when the upsert operation is complete.
+     */
+    abstract updateDeadTickers(tickerData: DeadTicker[]): Promise<void>;
 
     /**
      * Retrieves memories based on the specified parameters.

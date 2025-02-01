@@ -165,7 +165,7 @@ export interface Memory {
  */
 export interface Mention {
     mention: string; // The name of the mention.
-    count: string; // The count of occurrences of the mention.
+    total_count: number; // The count of occurrences of the mention.
 }
 
 /**
@@ -316,6 +316,7 @@ export type Character = {
     lore: string[];
     spamMessageExamples: MessageExample[][];
     dataMessageExamples: MessageExample[][];
+    dataThreadExamples: string[][];
     randomMessageExamples: MessageExample[][];
     dataExamples: string[];
     newsExamples: string[];

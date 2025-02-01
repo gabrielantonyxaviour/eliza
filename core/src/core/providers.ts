@@ -31,6 +31,7 @@ export async function getProvidersByIndex(
     indices: number[],
     state?: State
 ): Promise<string> {
+    console.log('indices', indices);
     const providerResults = await Promise.all(
         indices.map(async (index) => {
             if (index < 0 || index >= runtime.providers.length) {
@@ -39,6 +40,7 @@ export async function getProvidersByIndex(
             return await runtime.providers[index].get(runtime, message, state);
         })
     )
-
-    return providerResults.join('\n');
+    console.log("Provider Results")
+    console.log(providerResults)
+    return providerResults.join('\n\n');
 }

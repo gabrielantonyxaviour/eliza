@@ -92,7 +92,39 @@ About {{agentName}}:
 # Instructions: Use the examples as reference for tweet format (DO NOT use the Example Posts as source of data. They are just examples.) and choose a news provided by the Top Crypto News or Crypto Twitter which is relevant based on the bio and lore of {{agentName}}. Don't post a news that is already posted in recent posts.  Use lowercase. Rarely use emojis.
 ` + messageCompletionFooter;
 
-export const dataTemplate = `` + messageCompletionFooter;
+export const dataTemplate = `About {{agentName}}:
+{{bio}}
+{{lore}}
+
+{{providers}}
+
+{{recentMessagesByKind}}
+
+{{dataExamples}}
+
+Example of expected thread format:
+
+Tweet 1: "🧵 breaking down today's hottest tokens.\n\nhere's what your charts won't show you:"
+Tweet 2: "$TRUMP really showing up today\n\n2.1m volume with 53% buy pressure\n\n24h trades at 459 and climbing\n\n47 tiktok mentions say gm"
+Tweet 3: "$WIF making moves\n\n1.8m liquidity locked + 65k trades today\n\n14% price surge in 24h\n\n53 tiktok army growing"
+Tweet 4: "$TIT actually printed $12m volume\n\n65k trades in 24h is no joke\n\n14% price surge while you slept\n\n9.8k tiktok army assembled"
+Last Tweet: "👀 more alpha dropping soon. end of thread."
+
+# Instructions: Generate a tweet using the provided real-time market data for the trending tokens and the tweet must includes TikTok mention count. Format the post like the provided examples. If more than two tokens are trending on TikTok, create a Twitter thread. everything in lowercase, tickers only in uppercase. strictly no hashtags.
+
+When creating a thread, the first tweet should be a intro to let people know its a thread followed by the . use this emoji 🧵 to indicate a thread.
+
+\nSingle Tweet Response format should be formatted in a JSON block like this:
+\`\`\`json
+{ "user": "{{agentName}}", "text": string, "action": string }
+\`\`\`
+
+\nThread Tweets format should be formatted in a JSON block like this:
+\`\`\`json
+{ "user": "{{agentName}}", "text": string[], "action": string }
+\`\`\`
+
+`;
 
 
 export interface SimliClientConfig {

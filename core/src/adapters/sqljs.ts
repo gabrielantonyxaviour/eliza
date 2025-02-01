@@ -10,6 +10,8 @@ import {
     type Relationship,
     type UUID,
     Participant,
+    Mention,
+    DeadTicker,
 } from "../core/types.ts";
 import { sqliteTables } from "./sqlite/sqliteTables.ts";
 import { Database } from "./sqljs/types.ts";
@@ -39,6 +41,20 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
         }
         stmt.free();
         return participants;
+    }
+
+    async getTrendingMentions(): Promise<Mention[]> {
+        // Placeholder function
+        return [];
+    }
+
+    async getAggregatedMentions(): Promise<Mention[]> {
+        // Placeholder function
+        return [];
+    }
+
+    async updateDeadTickers(tickerData: DeadTicker[]): Promise<void> {
+        // Placeholder function
     }
 
     async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {

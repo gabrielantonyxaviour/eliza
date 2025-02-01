@@ -9,6 +9,8 @@ import {
     type Relationship,
     type UUID,
     Participant,
+    Mention,
+    DeadTicker,
 } from "../core/types.ts";
 import { DatabaseAdapter } from "../core/database.ts";
 const { Pool } = pg;
@@ -56,6 +58,19 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
         }
     }
 
+    async getTrendingMentions(): Promise<Mention[]> {
+        // Placeholder function
+        return [];
+    }
+
+    async getAggregatedMentions(): Promise<Mention[]> {
+        // Placeholder function
+        return [];
+    }
+
+    async updateDeadTickers(tickerData: DeadTicker[]): Promise<void> {
+        // Placeholder function
+    }
     async getRoom(roomId: UUID): Promise<UUID | null> {
         const client = await this.pool.connect();
         try {

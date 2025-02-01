@@ -36,6 +36,7 @@ const defaultCharacter: Character = {
     ],
     "spamMessageExamples": [],
     "dataMessageExamples": [],
+    "dataThreadExamples": [],
     "randomMessageExamples": [],
     "newsExamples": [],
     "randomExamples": [],

@@ -821,8 +821,16 @@ Text: ${attachment.text}
                 const messageString = `${post}`;
                 return messageString;
             })
-            .slice(0, 50)
+            .slice(0, 5)
             .join("\n");
+
+        const formattedDataThreadsExamples = this.character.dataThreadExamples.sort(() => 0.5 - Math.random())
+            .map((thread) => {
+                return thread.join('\n🔽\n');
+            })
+            .slice(0, 2)
+            .join("\n");
+
 
         const formattedNewsExamples = this.character.newsExamples.sort(() => 0.5 - Math.random())
             .map((post) => {
@@ -1052,6 +1060,14 @@ Text: ${attachment.text}
                     ? addHeader(
                         `# Example Posts for ${this.character.name}`,
                         formattedDataExamples
+                    )
+                    : "",
+            dataThreadExamples:
+                formattedDataThreadsExamples &&
+                    formattedDataThreadsExamples.replaceAll("\n", "").length > 0
+                    ? addHeader(
+                        `# Example Post Threads for ${this.character.name}`,
+                        formattedDataThreadsExamples
                     )
                     : "",
             newsExamples:

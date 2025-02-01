@@ -11,6 +11,8 @@ import {
     type Relationship,
     type UUID,
     Participant,
+    Mention,
+    DeadTicker,
 } from "../core/types.ts";
 
 import { sqliteTables } from "./sqlite/sqliteTables.ts";
@@ -37,6 +39,19 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
         return rows;
     }
 
+    async getTrendingMentions(): Promise<Mention[]> {
+        // Placeholder function
+        return [];
+    }
+
+    async getAggregatedMentions(): Promise<Mention[]> {
+        // Placeholder function
+        return [];
+    }
+
+    async updateDeadTickers(tickerData: DeadTicker[]): Promise<void> {
+        // Placeholder function
+    }
     async getParticipantsForRoom(roomId: UUID): Promise<UUID[]> {
         const sql = "SELECT userId FROM participants WHERE roomId = ?";
         const rows = this.db.prepare(sql).all(roomId) as { userId: string }[];

@@ -3,7 +3,7 @@ import settings from "../core/settings.ts";
 import NodeCache from "node-cache";
 import * as fs from "fs";
 import * as path from "path";
-import { TikTokData, TokenData } from "../types/tiktok.ts";
+import { DexPairData, TikTokData, TokenData } from "../types/tiktok.ts";
 
 class TikTokProvider {
     private cache: NodeCache;
@@ -41,104 +41,98 @@ class TikTokProvider {
     }
 
 
-    private async fetchTickerAddress(keyword: string): Promise<{ address: string, chain: string } | null> {
+    private async fetchTicker(keyword: string): Promise<DexPairData | null> {
         const options = {
             method: 'GET',
             headers: {
                 accept: 'application/json',
-                'X-API-KEY': process.env.BIRDEYE_API_KEY || ''
+                'X-API-KEY': settings.BIRDEYE_API_KEY || ''
             }
         };
 
-        const url = `https://public-api.birdeye.so/defi/v3/search?keyword=${encodeURIComponent(keyword)}&target=token&sort_by=price&sort_type=desc&offset=0&limit=20`;
-
+        const url = `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(keyword)}`;
         try {
             const response = await fetch(url, options);
             const data = await response.json();
-
-            if (!data.success || !data.data?.items?.[0]?.result || data.data.items[0].result.length == 0) {
+            if (!data || !data.pairs || data.pairs.length == 0) {
                 return null;
             }
 
-            let i = 0
-            while (i < data.data.items[0].result.length) {
-                if (data.data.items[0].result[i].symbol == keyword) return { address: data.data.items[0].result[i].address, chain: data.data.items[0].result[i].network }
-                i++
-            }
-            return null
+            return data.pairs[0]
         } catch (error) {
             console.error('Error fetching token data:', error);
             return null;
         }
     }
 
-
-    private analyzeTokenHealth(tokenData: TokenData): TikTokData {
+    private analyzeTokenHealth(tokenData: DexPairData): TikTokData {
         const {
-            name, symbol, address,
-            trade24h,
-            v24hUSD,
-            holder,
-            lastTradeUnixTime,
+            baseToken,
+            pairAddress,
+            txns,
+            volume,
             liquidity,
-            price,
-            mc,
-            numberMarkets
+            priceUsd,
+            priceChange,
+            marketCap,
         } = tokenData;
 
         const currentTime = Math.floor(Date.now() / 1000);
-        const hoursSinceLastTrade = (currentTime - lastTradeUnixTime) / 3600;
+        const hoursSinceLastTrade = (currentTime - tokenData.pairCreatedAt / 1000) / 3600;
 
         const DEAD_CRITERIA = {
-            MIN_24H_TRADES: 10,
-            MIN_24H_VOLUME_USD: 100, // $100 minimum daily volume
-            MIN_HOLDERS: 5,
-            MAX_HOURS_NO_TRADE: 24,
-            MIN_LIQUIDITY: 1000, // $1000 minimum liquidity
-            MIN_MARKET_CAP: 10000, // $10,000 minimum market cap
-            MIN_MARKETS: 1
+            MIN_24H_TRADES: 5,
+            MIN_24H_VOLUME_USD: 50,
+            MIN_LIQUIDITY: 500,
+            MIN_MARKET_CAP: 5000,
+            MAX_HOURS_NO_TRADE: 48
         };
 
         // Calculate individual death factors
+        const totalTrades = txns.h24.buys + txns.h24.sells;
+        const buySellRatio = totalTrades > 0 ? txns.h24.buys / totalTrades : 0;
+
         const deathFactors = {
-            noRecentTrades: trade24h <= DEAD_CRITERIA.MIN_24H_TRADES,
-            lowVolume: v24hUSD <= DEAD_CRITERIA.MIN_24H_VOLUME_USD,
-            fewHolders: holder <= DEAD_CRITERIA.MIN_HOLDERS,
-            tradingInactive: hoursSinceLastTrade >= DEAD_CRITERIA.MAX_HOURS_NO_TRADE,
-            noLiquidity: liquidity <= DEAD_CRITERIA.MIN_LIQUIDITY,
-            tinyMarketCap: mc <= DEAD_CRITERIA.MIN_MARKET_CAP,
-            limitedMarkets: numberMarkets < DEAD_CRITERIA.MIN_MARKETS
+            lowTradeActivity: totalTrades <= DEAD_CRITERIA.MIN_24H_TRADES,
+            lowVolume: volume.h24 <= DEAD_CRITERIA.MIN_24H_VOLUME_USD,
+            noLiquidity: liquidity.usd <= DEAD_CRITERIA.MIN_LIQUIDITY,
+            tinyMarketCap: marketCap <= DEAD_CRITERIA.MIN_MARKET_CAP,
+            tradingInactive: hoursSinceLastTrade >= DEAD_CRITERIA.MAX_HOURS_NO_TRADE
         };
 
-        // Token is considered dead if it meets multiple death criteria
+        // Token is considered dead if it meets 3 or more death criteria
         const deathScore = Object.values(deathFactors).filter(Boolean).length;
-        const isDead = deathScore >= 3; // Token is dead if it meets 3 or more death criteria
+        const isDead = deathScore >= 3;
 
         return {
-            name,
-            symbol,
-            address,
+            name: baseToken.name,
+            symbol: baseToken.symbol,
+            address: baseToken.address,
             isDead,
             deathScore,
+            tiktokMentions: tokenData.tiktokMentions,
             keyMetrics: {
-                price,
-                marketCap: mc,
-                dailyTrades: trade24h,
-                dailyVolumeUSD: v24hUSD,
-                holders: holder,
+                price: parseFloat(priceUsd),
+                marketCap,
+                dailyTrades: totalTrades,
+                dailyVolumeUSD: volume.h24,
                 hoursSinceLastTrade: Math.round(hoursSinceLastTrade),
-                liquidity,
+                liquidityUSD: liquidity.usd,
+                liquidityBaseToken: liquidity.base, // Adding liquidity in base tokens
+                buySellRatio, // Adding buy/sell ratio to assess trading behavior
+                priceChange24h: priceChange.h24 // Including 24-hour price change %
             },
             deathFactors
         };
     }
+
 
     private async fetchTokenData(token: { address: string, chain: string }): Promise<TikTokData | null> {
         const options = {
             method: 'GET',
             headers: {
                 accept: 'application/json',
-                'X-API-KEY': process.env.BIRDEYE_API_KEY || '',
+                'X-API-KEY': settings.BIRDEYE_API_KEY || '',
                 'x-chain': token.chain
             }
         };
@@ -160,49 +154,58 @@ class TikTokProvider {
     }
 
 
-
-
-
     private async getTikTokData(): Promise<TikTokData[]> {
         const cacheKey = `tiktokData`;
 
-        // Check cache
+        console.log('Checking cache for TikTok data');
         const cached = this.getCachedData<TikTokData[]>(cacheKey);
-        if (cached) return cached;
+        // if (cached) {
+        //     console.log('Cache hit for TikTok data');
+        //     return cached;
+        // }
 
-        const mentions = await this.getTrendingMentions();
-        const tokens = await Promise.all(
-            mentions.map(async mention => {
-                const token = await this.fetchTickerAddress(mention.mention);
-                if (token === null) {
-                    return null;
-                }
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                const tokenData = await this.fetchTokenData(token);
-                if (tokenData === null) {
-                    return null;
-                }
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                return tokenData;
-            })
-        ).then(results => results.filter(result => result !== null));
+        console.log('Fetching aggregated mentions from the database');
+        const mentions = await this.getAggregatedMentions();
+        console.log(mentions)
+        console.log('Fetching token data for each mention');
+
+        const tokens: TikTokData[] = [];
+        for (const mention of mentions) {
+            console.log("Fetching token address for ticker:", mention.mention);
+            const token = await this.fetchTicker(mention.mention);
+            if (token === null) {
+                console.log(`No token found for mention: ${mention.mention}`);
+                continue;
+            }
+            const analyzedToken = this.analyzeTokenHealth({ ...token, tiktokMentions: mention.total_count });
+            tokens.push(analyzedToken);
+            if (tokens.length >= 5) {
+                break;
+            }
+        }
+
         const nonDeadTokens = tokens.filter(token => !token.isDead);
 
         if (nonDeadTokens.length == 0) {
-            console.log("No Trending Tickers in Tiktok at the moment.")
+            console.log("No Trending Tickers in Tiktok at the moment.");
         }
 
-        const postedAt = new Date()
+        const postedAt = new Date();
         const pushData = tokens.map(token => {
+            console.log(token.symbol + " is " + (token.isDead ? '' : "not") + "dead");
             return {
                 name: token.symbol,
                 posted_at: token.isDead ? new Date(0) : postedAt,
                 is_dead: token.isDead,
             }
-        })
-        await this.runtime.databaseAdapter.updateDeadTickers(pushData)
+        });
 
+        console.log('Updating dead tickers in the database');
+        await this.runtime.databaseAdapter.updateDeadTickers(pushData);
+
+        console.log('Caching non-dead tokens');
         this.setCachedData(cacheKey, nonDeadTokens);
+
         return nonDeadTokens;
     }
 
@@ -236,29 +239,33 @@ class TikTokProvider {
     }
 
     formatTikTokData(data: TikTokData[]): string {
-        let output = "**Trending Ticker mentions on TikTok with Market Data**\n\n";
+        let output = "**Trending Ticker Mentions on TikTok with Market Data**\n\n";
         if (!data?.length) return "No token data available";
 
-        return data.map(token =>
+        return output + data.map(token =>
             `Token: ${token.name} (${token.symbol})
-          Address: ${token.address}
-          Price: $${token.keyMetrics.price.toFixed(6)}
-          Market Cap: $${token.keyMetrics.marketCap.toLocaleString()}
-          24h Trades: ${token.keyMetrics.dailyTrades}
-          24h Volume: $${token.keyMetrics.dailyVolumeUSD.toLocaleString()}
-          Holders: ${token.keyMetrics.holders}
-          Hours Since Last Trade: ${token.keyMetrics.hoursSinceLastTrade}
-          Liquidity: $${token.keyMetrics.liquidity.toLocaleString()}`
+    Address: ${token.address}
+    Tiktok Mentions: ${token.tiktokMentions}
+    Price: $${token.keyMetrics.price.toFixed(6)}
+    Market Cap: $${token.keyMetrics.marketCap.toLocaleString()}
+    24h Trades: ${token.keyMetrics.dailyTrades}
+    24h Volume: $${token.keyMetrics.dailyVolumeUSD.toLocaleString()}
+    Buy/Sell Ratio: ${(token.keyMetrics.buySellRatio * 100).toFixed(2)}%
+    24h Price Change: ${(token.keyMetrics.priceChange24h).toFixed(2)}%
+    Hours Since Last Trade: ${token.keyMetrics.hoursSinceLastTrade}
+    Liquidity: $${token.keyMetrics.liquidityUSD.toLocaleString()}
+    Liquidity (Base Token): ${token.keyMetrics.liquidityBaseToken.toLocaleString()}`
         ).join('\n\n');
     }
 
     async getFormattedTikTokData(): Promise<string> {
         try {
             const tikTokData = await this.getTikTokData();
+            console.log('TikTok Data:', tikTokData);
             return this.formatTikTokData(tikTokData);
         } catch (error) {
-            console.error("Error formatting news:", error);
-            return "Unable to fetch news at this time. Please try again later.";
+            console.error("Error formatting Tiktok Data:", error);
+            return "Unable to fetch Tiktok Data at this time. Please try again later.";
         }
     }
 }
@@ -274,7 +281,7 @@ const tiktokProvider: Provider = {
             return provider.getFormattedTikTokData();
         } catch (error) {
             console.error("Error fetching news:", error);
-            return "Unable to fetch news at this time. Please try again later.";
+            return "Unable to fetch Tiktok Data at this time. Please try again later.";
         }
     },
 };
