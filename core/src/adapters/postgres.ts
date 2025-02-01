@@ -83,7 +83,9 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             client.release();
         }
     }
-
+    async getMentionsByTickerOrAddress(ticker: string): Promise<number> {
+        return 0
+    }
     async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {
         const client = await this.pool.connect();
         try {

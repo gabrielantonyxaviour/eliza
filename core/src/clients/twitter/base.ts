@@ -156,6 +156,7 @@ export class ClientBase extends EventEmitter {
         );
     }
 
+
     constructor({ runtime }: { runtime: IAgentRuntime }) {
         super();
         this.runtime = runtime;
@@ -560,6 +561,7 @@ export class ClientBase extends EventEmitter {
         );
         await this.twitterClient.setCookies(cookieStrings);
     }
+
 
     async saveRequestMessage(message: Memory, state: State) {
         if (message.content.text) {

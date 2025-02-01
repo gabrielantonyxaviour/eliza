@@ -16,6 +16,7 @@ export interface Content {
     source?: string; // The source of the content, if applicable, such as a reference or origin.
     url?: string; // The actual URL of the message or post, i.e. tweet URL or message link in discord
     inReplyTo?: UUID; // If this is a message in a thread, or a reply, store this
+    inQuoteTo?: UUID; // If this is a message in a thread, or a reply, store this
     attachments?: Media[];
     [key: string]: unknown; // Allows for additional properties to be included dynamically.
 }
@@ -374,6 +375,7 @@ export interface IDatabaseAdapter {
     }): Promise<Memory[]>;
     getMemoryById(id: UUID): Promise<Memory | null>;
     getTrendingMentions(): Promise<Mention[]>;
+    getMentionsByTicker(ticker: string): Promise<number>;
     getAggregatedMentions(): Promise<Mention[]>;
     updateDeadTickers(tickerData: DeadTicker[]): Promise<void>;
     getMemoriesByRoomIds(params: {

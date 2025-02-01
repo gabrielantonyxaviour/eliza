@@ -112,6 +112,21 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         }
     }
 
+    async getMentionsByTickerOrAddress(ticker: string): Promise<number> {
+        try {
+            const { data, error } = await this.supabase
+                .rpc('get_mentions_by_ticker', {
+                    ticker
+                });
+
+            if (error) throw error;
+            return data.total_count;
+        } catch (error) {
+            console.error('Error getting trending mentions:', error);
+            throw error;
+        }
+    }
+
     async getAggregatedMentions(): Promise<Mention[]> {
         try {
             const { data, error } = await this.supabase

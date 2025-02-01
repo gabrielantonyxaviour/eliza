@@ -48,7 +48,9 @@ export class SqliteDatabaseAdapter extends DatabaseAdapter {
         // Placeholder function
         return [];
     }
-
+    async getMentionsByTickerOrAddress(ticker: string): Promise<number> {
+        return 0
+    }
     async updateDeadTickers(tickerData: DeadTicker[]): Promise<void> {
         // Placeholder function
     }

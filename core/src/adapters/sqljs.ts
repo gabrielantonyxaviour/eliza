@@ -56,7 +56,9 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
     async updateDeadTickers(tickerData: DeadTicker[]): Promise<void> {
         // Placeholder function
     }
-
+    async getMentionsByTickerOrAddress(ticker: string): Promise<number> {
+        return 0
+    }
     async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {
         const sql = `SELECT * FROM memories WHERE type = ? AND agentId = ? ORDER BY createdAt DESC LIMIT ?`;
         const stmt = this.db.prepare(sql);

@@ -154,6 +154,7 @@ class TikTokProvider {
     }
 
 
+
     private async getTikTokData(): Promise<TikTokData[]> {
         const cacheKey = `tiktokData`;
 
@@ -258,6 +259,46 @@ class TikTokProvider {
         ).join('\n\n');
     }
 
+    formatSingleTiktokData(token: TikTokData): string {
+        return `Token: ${token.name} (${token.symbol})
+    Address: ${token.address}
+    Tiktok Mentions: ${token.tiktokMentions}
+    Price: $${token.keyMetrics.price.toFixed(6)}
+    Market Cap: $${token.keyMetrics.marketCap.toLocaleString()}
+    24h Trades: ${token.keyMetrics.dailyTrades}
+    24h Volume: $${token.keyMetrics.dailyVolumeUSD.toLocaleString()}
+    Buy/Sell Ratio: ${(token.keyMetrics.buySellRatio * 100).toFixed(2)}%
+    24h Price Change: ${(token.keyMetrics.priceChange24h).toFixed(2)}%
+    Hours Since Last Trade: ${token.keyMetrics.hoursSinceLastTrade}
+    Liquidity: $${token.keyMetrics.liquidityUSD.toLocaleString()}
+    Liquidity (Base Token): ${token.keyMetrics.liquidityBaseToken.toLocaleString()}`
+    }
+
+    async getMentionsByTicker(ticker: string): Promise<number> {
+        try {
+            const total_count = await this.runtime.databaseAdapter.getMentionsByTicker(ticker);
+            return total_count
+        } catch (error) {
+            console.error('Error fetching mentions by ticker:', error);
+            return 0;
+        }
+    }
+
+    async getTokenDataByTicker(tickers: string[]): Promise<string> {
+        const responses = []
+        for (const ticker of tickers) {
+            const token = await this.fetchTicker(ticker);
+            if (token === null) {
+                responses.push("No token found for ticker: " + ticker);
+            }
+            const mentions = await this.getMentionsByTicker(ticker);
+            const analyzedToken = this.analyzeTokenHealth({ ...token, tiktokMentions: mentions });
+            responses.push(this.formatSingleTiktokData(analyzedToken));
+        }
+
+        return responses.join('\n\n');
+    }
+
     async getFormattedTikTokData(): Promise<string> {
         try {
             const tikTokData = await this.getTikTokData();
@@ -286,4 +327,4 @@ const tiktokProvider: Provider = {
     },
 };
 
-export { tiktokProvider };
+export { tiktokProvider, TikTokProvider };

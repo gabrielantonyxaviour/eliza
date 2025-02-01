@@ -154,6 +154,84 @@ export async function sendTweetChunks(
     return memories;
 }
 
+export async function sendQuoteTweetChunks(
+    client: ClientBase,
+    content: Content,
+    roomId: UUID,
+    twitterUsername: string,
+    quoteTweetId: string
+): Promise<Memory[]> {
+    const tweetChunks = splitTweetContent(content.text);
+    const sentTweets: Tweet[] = [];
+
+    for (const chunk of tweetChunks) {
+        const result = await client.requestQueue.add(
+            async () =>
+                await client.twitterClient.sendQuoteTweet(
+                    chunk.replaceAll(/\\n/g, "\n").trim(),
+                    quoteTweetId
+                )
+        );
+        // console.log("send tweet result:\n", result);
+        const body = await result.json();
+        console.log("send tweet body:\n", body.data.create_tweet.tweet_results);
+        const tweetResult = body.data.create_tweet.tweet_results.result;
+
+        console.log("Quoted Tweet Result")
+        console.log(tweetResult)
+        const finalTweet = {
+            id: tweetResult.rest_id,
+            text: tweetResult.legacy.full_text,
+            conversationId: tweetResult.legacy.conversation_id_str,
+            createdAt: tweetResult.legacy.created_at,
+            userId: tweetResult.legacy.user_id_str,
+            quotedStatusId: tweetResult.legacy.quoted_status_id_str,
+            permanentUrl: `https://twitter.com/${twitterUsername}/status/${tweetResult.rest_id}`,
+            hashtags: [],
+            mentions: [],
+            photos: [],
+            thread: [],
+            urls: [],
+            videos: [],
+        } as Tweet;
+
+        sentTweets.push(finalTweet);
+    }
+
+    const memories: Memory[] = sentTweets.map((tweet) => ({
+        id: stringToUuid(tweet.id),
+        agentId: client.runtime.agentId,
+        userId: client.runtime.agentId,
+        content: {
+            text: tweet.text,
+            source: "twitter",
+            url: tweet.permanentUrl,
+            inQuoteTo: tweet.quotedStatusId
+                ? stringToUuid(tweet.quotedStatusId)
+                : undefined,
+        },
+        roomId,
+        embedding: embeddingZeroVector,
+        createdAt: tweet.timestamp * 1000,
+    }));
+
+    return memories;
+}
+
+export async function likeTweet(client: ClientBase, tweetId: string) {
+    await client.requestQueue.add(
+        async () =>
+            await client.twitterClient.likeTweet(tweetId)
+    );
+}
+
+export async function retweet(client: ClientBase, tweetId: string) {
+    await client.requestQueue.add(
+        async () =>
+            await client.twitterClient.retweet(tweetId)
+    );
+}
+
 function splitTweetContent(content: string): string[] {
     const tweetChunks: string[] = [];
     let currentChunk = "";
