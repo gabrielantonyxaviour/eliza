@@ -56,7 +56,7 @@ export class SqlJsDatabaseAdapter extends DatabaseAdapter {
     async updateDeadTickers(tickerData: DeadTicker[]): Promise<void> {
         // Placeholder function
     }
-    async getMentionsByTickerOrAddress(ticker: string): Promise<number> {
+    async getMentionsByTicker(ticker: string): Promise<number> {
         return 0
     }
     async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {

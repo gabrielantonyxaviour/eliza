@@ -78,6 +78,12 @@ export abstract class DatabaseAdapter implements IDatabaseAdapter {
     abstract getAggregatedMentions(): Promise<Mention[]>;
 
     /**
+     * Retrieves the number of mentions for a specific ticker symbol.
+     * @param ticker The ticker symbol to search for.
+     */
+    abstract getMentionsByTicker(ticker: string): Promise<number>;
+
+    /**
      * Updates dead tickers in the database.
      * @param tickerData An array of DeadTicker objects to upsert.
      * @returns A Promise that resolves when the upsert operation is complete.

@@ -5,13 +5,11 @@ import { log_to_file } from "../../core/logger.ts";
 import {
     messageCompletionFooter,
     parseJsonArrayFromText,
-    shouldRespondFooter,
 } from "../../core/parsing.ts";
 import {
     Content,
     HandlerCallback,
     IAgentRuntime,
-    Memory,
     ModelClass,
     State,
 } from "../../core/types.ts";
@@ -20,51 +18,9 @@ import { ClientBase } from "./base.ts";
 import { buildConversationThread, likeTweet, retweet, sendQuoteTweetChunks, sendTweetChunks, wait } from "./utils.ts";
 import {
     generateMessageResponse,
-    generateShouldRespond,
     generateText,
 } from "../../core/generation.ts";
 import { TikTokProvider } from "../../providers/tiktok.ts";
-
-export const messageHandlerTemplate =
-    `{{relevantFacts}}
-{{recentFacts}}
-
-About {{agentName}} (@{{twitterUserName}}):
-{{bio}}
-{{lore}}
-{{topics}}
-
-{{characterMessageExamples}}
-
-# Task: Generate a reply to the below post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}):
-{{currentPost}}
-
-DONT use hashtags. Rarely use emojis. Use lowercase. Do not add commentary or ackwowledge this request, just write the post.
-
-` + messageCompletionFooter;
-
-export const shouldRespondTemplate =
-    `# INSTRUCTIONS: Determine if {{agentName}} (@{{twitterUserName}}) should respond to the message and participate in the conversation. Do not comment. Just respond with "true" or "false".
-
-Response options are RESPOND, IGNORE and STOP.
-
-{{agentName}} should respond to messages that are directed at them, or participate in conversations that are interesting or relevant to their background, IGNORE messages that are irrelevant to them, and should STOP if the conversation is concluded.
-
-{{agentName}} is in a room with other users and wants to be conversational, but not annoying.
-{{agentName}} should RESPOND to messages that are directed at them, or participate in conversations that are interesting or relevant to their background.
-If a message is not interesting or relevant, {{agentName}} should IGNORE.
-Unless directly RESPONDing to a user, {{agentName}} should IGNORE messages that are very short or do not contain much information.
-If a user asks {{agentName}} to stop talking, {{agentName}} should STOP.
-If {{agentName}} concludes a conversation and isn't part of the conversation anymore, {{agentName}} should STOP.
-
-{{recentPosts}}
-
-IMPORTANT: {{agentName}} (aka @{{twitterUserName}}) is particularly sensitive about being annoying, so if there is any doubt, it is better to IGNORE than to RESPOND.
-
-{{currentPost}}
-
-# INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, or [IGNORE] if {{agentName}} should not respond to the last message and [STOP] if {{agentName}} should stop participating in the conversation. RESPOND only if the last message is in English.
-` + shouldRespondFooter;
 
 const replyHandlerTemplate =
     `
@@ -146,7 +102,12 @@ export class TwitterInteractionClient extends ClientBase {
             uniqueTweetCandidates
                 .sort((a, b) => a.id.localeCompare(b.id))
                 .filter((tweet) => tweet.userId !== this.twitterUserId)
-
+            console.log("Unique Tweet Candidates")
+            console.log(uniqueTweetCandidates)
+            if (uniqueTweetCandidates.length === 0) {
+                console.log("No tweet candidates found in the interactoins for: " + `@${this.runtime.getSetting("TWITTER_USERNAME")}`);
+                return;
+            }
             const prompt = `${uniqueTweetCandidates.map(
                 (tweet) => `
 ID: ${tweet.id}${tweet.inReplyToStatusId ? ` In reply to: ${tweet.inReplyToStatusId}` : ""}
@@ -192,17 +153,21 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
 
             const datestr = new Date().toUTCString().replace(/:/g, "-");
             const logName = `${this.runtime.character.name}_interactions_${datestr}`;
-            log_to_file(logName, prompt);
+            // log_to_file(logName, prompt);
             let parsedContent: { tweetId: string, action: string }[] = [];
             while (true) {
+                console.log("Interactoin prompt")
+                console.log(prompt)
                 const interactionDecisionResponse = await generateText({
                     runtime: this.runtime,
                     context: prompt,
                     modelClass: ModelClass.SMALL,
                 });
+                console.log("Response from AI for Interaction Operation")
+                console.log(interactionDecisionResponse)
 
                 const responseLogName = `${this.runtime.character.name}_interactions_${datestr}_result`;
-                log_to_file(responseLogName, interactionDecisionResponse);
+                // log_to_file(responseLogName, interactionDecisionResponse);
                 parsedContent = parseJsonArrayFromText(interactionDecisionResponse) as { tweetId: string, action: string }[]
                 if (!parsedContent) {
                     console.log("parsedContent is null, retrying");
@@ -341,14 +306,14 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
                         state: { ...state, tokenProviderData: tokenProviderData.length == 0 ? tokenProviderData : "No token mention present", exampleData: tokenProviderData.length == 0 ? state.dataExamples : state.randomExamples },
                         template: tweet.action == "REPLY" ? replyHandlerTemplate : quoteHandlerTemplate,
                     });
-                    const promptFilePath = `search_context_${Date.now()}.txt`;
+                    const promptFilePath = `interactions_context_${Date.now()}.txt`;
                     fs.writeFileSync(promptFilePath, context.trim(), "utf8");
                     console.log(`Prompt saved to ${promptFilePath}`);
                     // log context to file
-                    log_to_file(
-                        `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_search_context`,
-                        context
-                    );
+                    // log_to_file(
+                    //     `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_interactions_context`,
+                    //     context
+                    // );
 
                     const responseContent = await generateMessageResponse({
                         runtime: this.runtime,
@@ -358,14 +323,14 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
                     responseContent.inReplyTo = tweet.action == "REPLY" ? message.id : undefined;
                     responseContent.inQuoteTo = tweet.action == "QUOTE" ? message.id : undefined;
 
-                    log_to_file(
-                        `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_search_response`,
-                        JSON.stringify(responseContent)
-                    );
+                    // log_to_file(
+                    //     `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_interactions_response`,
+                    //     JSON.stringify(responseContent)
+                    // );
 
                     const response = responseContent;
 
-                    const responseFilePath = `search_response_${Date.now()}.txt`;
+                    const responseFilePath = `interactions_response_${Date.now()}.txt`;
                     fs.writeFileSync(responseFilePath, response.text, "utf8");
                     console.log(`Response saved`);
 

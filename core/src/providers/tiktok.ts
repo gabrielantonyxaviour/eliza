@@ -158,7 +158,7 @@ class TikTokProvider {
     private async getTikTokData(): Promise<TikTokData[]> {
         const cacheKey = `tiktokData`;
 
-        console.log('Checking cache for TikTok data');
+        console.log('Checking cache for TikTok data. DISABLED TEMPORARILY');
         const cached = this.getCachedData<TikTokData[]>(cacheKey);
         // if (cached) {
         //     console.log('Cache hit for TikTok data');
@@ -167,14 +167,13 @@ class TikTokProvider {
 
         console.log('Fetching aggregated mentions from the database');
         const mentions = await this.getAggregatedMentions();
-        console.log(mentions)
         console.log('Fetching token data for each mention');
 
         const tokens: TikTokData[] = [];
         for (const mention of mentions) {
             console.log("Fetching token address for ticker:", mention.mention);
             const token = await this.fetchTicker(mention.mention);
-            if (token === null) {
+            if (!token) {
                 console.log(`No token found for mention: ${mention.mention}`);
                 continue;
             }
@@ -242,20 +241,19 @@ class TikTokProvider {
     formatTikTokData(data: TikTokData[]): string {
         let output = "**Trending Ticker Mentions on TikTok with Market Data**\n\n";
         if (!data?.length) return "No token data available";
-
         return output + data.map(token =>
             `Token: ${token.name} (${token.symbol})
-    Address: ${token.address}
-    Tiktok Mentions: ${token.tiktokMentions}
-    Price: $${token.keyMetrics.price.toFixed(6)}
-    Market Cap: $${token.keyMetrics.marketCap.toLocaleString()}
-    24h Trades: ${token.keyMetrics.dailyTrades}
-    24h Volume: $${token.keyMetrics.dailyVolumeUSD.toLocaleString()}
-    Buy/Sell Ratio: ${(token.keyMetrics.buySellRatio * 100).toFixed(2)}%
-    24h Price Change: ${(token.keyMetrics.priceChange24h).toFixed(2)}%
-    Hours Since Last Trade: ${token.keyMetrics.hoursSinceLastTrade}
-    Liquidity: $${token.keyMetrics.liquidityUSD.toLocaleString()}
-    Liquidity (Base Token): ${token.keyMetrics.liquidityBaseToken.toLocaleString()}`
+        Address: ${token.address}
+        Tiktok Mentions: ${token.tiktokMentions}
+        Price: $${token.keyMetrics.price ? token.keyMetrics.price.toFixed(6) : 'N/A'}
+        Market Cap: $${token.keyMetrics.marketCap ? token.keyMetrics.marketCap.toLocaleString() : 'N/A'}
+        24h Trades: ${token.keyMetrics.dailyTrades ? token.keyMetrics.dailyTrades : 'N/A'}
+        24h Volume: $${token.keyMetrics.dailyVolumeUSD ? token.keyMetrics.dailyVolumeUSD.toLocaleString() : 'N/A'}
+        Buy/Sell Ratio: ${(token.keyMetrics.buySellRatio ? token.keyMetrics.buySellRatio * 100 : 0).toFixed(2)}
+        24h Price Change: ${(token.keyMetrics.priceChange24h ? token.keyMetrics.priceChange24h : 0).toFixed(2)}%
+        Hours Since Last Trade: ${token.keyMetrics.hoursSinceLastTrade ? token.keyMetrics.hoursSinceLastTrade : 'N/A'}
+        Liquidity: $${token.keyMetrics.liquidityUSD ? token.keyMetrics.liquidityUSD.toLocaleString() : 'N/A'}
+        Liquidity (Base Token): ${token.keyMetrics.liquidityBaseToken ? token.keyMetrics.liquidityBaseToken.toLocaleString() : 'N/A'}`
         ).join('\n\n');
     }
 
@@ -263,15 +261,15 @@ class TikTokProvider {
         return `Token: ${token.name} (${token.symbol})
     Address: ${token.address}
     Tiktok Mentions: ${token.tiktokMentions}
-    Price: $${token.keyMetrics.price.toFixed(6)}
-    Market Cap: $${token.keyMetrics.marketCap.toLocaleString()}
-    24h Trades: ${token.keyMetrics.dailyTrades}
-    24h Volume: $${token.keyMetrics.dailyVolumeUSD.toLocaleString()}
-    Buy/Sell Ratio: ${(token.keyMetrics.buySellRatio * 100).toFixed(2)}%
-    24h Price Change: ${(token.keyMetrics.priceChange24h).toFixed(2)}%
-    Hours Since Last Trade: ${token.keyMetrics.hoursSinceLastTrade}
-    Liquidity: $${token.keyMetrics.liquidityUSD.toLocaleString()}
-    Liquidity (Base Token): ${token.keyMetrics.liquidityBaseToken.toLocaleString()}`
+    Price: $${token.keyMetrics.price ? token.keyMetrics.price.toFixed(6) : 'N/A'}
+    Market Cap: $${token.keyMetrics.marketCap ? token.keyMetrics.marketCap.toLocaleString() : 'N/A'}
+    24h Trades: ${token.keyMetrics.dailyTrades ? token.keyMetrics.dailyTrades : 'N/A'}
+    24h Volume: $${token.keyMetrics.dailyVolumeUSD ? token.keyMetrics.dailyVolumeUSD.toLocaleString() : 'N/A'}
+    Buy/Sell Ratio: ${(token.keyMetrics.buySellRatio ? token.keyMetrics.buySellRatio * 100 : 0).toFixed(2)}
+    24h Price Change: ${(token.keyMetrics.priceChange24h ? token.keyMetrics.priceChange24h : 0).toFixed(2)}%
+    Hours Since Last Trade: ${token.keyMetrics.hoursSinceLastTrade ? token.keyMetrics.hoursSinceLastTrade : 'N/A'}
+    Liquidity: $${token.keyMetrics.liquidityUSD ? token.keyMetrics.liquidityUSD.toLocaleString() : 'N/A'}
+    Liquidity (Base Token): ${token.keyMetrics.liquidityBaseToken ? token.keyMetrics.liquidityBaseToken.toLocaleString() : 'N/A'}`
     }
 
     async getMentionsByTicker(ticker: string): Promise<number> {
@@ -290,6 +288,7 @@ class TikTokProvider {
             const token = await this.fetchTicker(ticker);
             if (token === null) {
                 responses.push("No token found for ticker: " + ticker);
+                continue;
             }
             const mentions = await this.getMentionsByTicker(ticker);
             const analyzedToken = this.analyzeTokenHealth({ ...token, tiktokMentions: mentions });
@@ -302,7 +301,6 @@ class TikTokProvider {
     async getFormattedTikTokData(): Promise<string> {
         try {
             const tikTokData = await this.getTikTokData();
-            console.log('TikTok Data:', tikTokData);
             return this.formatTikTokData(tikTokData);
         } catch (error) {
             console.error("Error formatting Tiktok Data:", error);

@@ -77,8 +77,6 @@ export async function generateText({
                     baseURL: "https://llm-gateway.heurist.xyz",
                 });
 
-                console.log("****** CONTEXT\n", context);
-
                 const { text: openaiResponse } = await aiGenerateText({
                     model: openai.languageModel(model),
                     prompt: context,
@@ -87,8 +85,6 @@ export async function generateText({
                     frequencyPenalty: frequency_penalty,
                     presencePenalty: presence_penalty,
                 });
-
-                console.log("****** RESPONSE\n", openaiResponse);
 
                 response = openaiResponse;
                 prettyConsole.log("Received response from OpenAI model.");
@@ -98,7 +94,6 @@ export async function generateText({
                 prettyConsole.log("Initializing OpenAI model.");
                 const openai = createOpenAI({ apiKey });
 
-                console.log("****** CONTEXT\n", context);
 
                 const { text: openaiResponse } = await aiGenerateText({
                     model: openai.languageModel(model),
@@ -108,8 +103,6 @@ export async function generateText({
                     frequencyPenalty: frequency_penalty,
                     presencePenalty: presence_penalty,
                 });
-
-                console.log("****** RESPONSE\n", openaiResponse);
 
                 response = openaiResponse;
                 prettyConsole.log("Received response from OpenAI model.");
@@ -486,11 +479,16 @@ export async function generateMessageResponse({
     let retryLength = 1000; // exponential backoff
     while (true) {
         try {
+            console.log("Generation Prompt")
+            console.log(context)
             const response = await generateText({
                 runtime,
                 context,
                 modelClass,
             });
+
+            console.log("Response from AI for Generate Operation")
+            console.log(response)
             // try parsing the response as JSON, if null then try again
             const parsedContent = parseJSONObjectFromText(response) as Content;
             if (!parsedContent) {

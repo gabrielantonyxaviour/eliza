@@ -128,7 +128,7 @@ export const generateCaption = async (
     };
 };
 
-export async function storeImage(base64Image: string, supabase: SupabaseClient) {
+export async function storeImage(base64Image: string, supabase: SupabaseClient): Promise<{ url: string, buffer: Buffer }> {
     // Remove data URL prefix if present
     const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
 
@@ -155,5 +155,5 @@ export async function storeImage(base64Image: string, supabase: SupabaseClient) 
         .getPublicUrl(`tweets/${fileName}`);
 
 
-    return publicUrl;
+    return { url: publicUrl, buffer: buffer };
 }

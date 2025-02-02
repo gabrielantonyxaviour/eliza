@@ -58,6 +58,10 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
         }
     }
 
+    async getMentionsByTicker(ticker: string): Promise<number> {
+        return 0;
+    }
+
     async getTrendingMentions(): Promise<Mention[]> {
         // Placeholder function
         return [];
@@ -83,7 +87,7 @@ export class PostgresDatabaseAdapter extends DatabaseAdapter {
             client.release();
         }
     }
-    async getMentionsByTickerOrAddress(ticker: string): Promise<number> {
+    async Address(ticker: string): Promise<number> {
         return 0
     }
     async getMemoriesByKind(params: { kind: string; count?: number; agentId: UUID; }): Promise<Memory[]> {

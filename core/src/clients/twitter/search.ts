@@ -184,17 +184,20 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
 
             const datestr = new Date().toUTCString().replace(/:/g, "-");
             const logName = `${this.runtime.character.name}_search_${datestr}`;
-            log_to_file(logName, prompt);
+            // log_to_file(logName, prompt);
             let parsedContent: { tweetId: string, action: string }[] = [];
             while (true) {
+                console.log("Search Prompt")
+                console.log(prompt)
                 const interactionDecisionResponse = await generateText({
                     runtime: this.runtime,
                     context: prompt,
                     modelClass: ModelClass.SMALL,
                 });
-
+                console.log("Response from AI for Search Operation")
+                console.log(interactionDecisionResponse)
                 const responseLogName = `${this.runtime.character.name}_search_${datestr}_result`;
-                log_to_file(responseLogName, interactionDecisionResponse);
+                // log_to_file(responseLogName, interactionDecisionResponse);
                 parsedContent = parseJsonArrayFromText(interactionDecisionResponse) as { tweetId: string, action: string }[]
                 if (!parsedContent) {
                     console.log("parsedContent is null, retrying");
@@ -314,10 +317,10 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
                     fs.writeFileSync(promptFilePath, context.trim(), "utf8");
                     console.log(`Prompt saved to ${promptFilePath}`);
                     // log context to file
-                    log_to_file(
-                        `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_search_context`,
-                        context
-                    );
+                    // log_to_file(
+                    //     `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_search_context`,
+                    //     context
+                    // );
 
                     const responseContent = await generateMessageResponse({
                         runtime: this.runtime,
@@ -327,10 +330,10 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
                     responseContent.inReplyTo = tweet.action == "REPLY" ? message.id : undefined;
                     responseContent.inQuoteTo = tweet.action == "QUOTE" ? message.id : undefined;
 
-                    log_to_file(
-                        `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_search_response`,
-                        JSON.stringify(responseContent)
-                    );
+                    // log_to_file(
+                    //     `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_search_response`,
+                    //     JSON.stringify(responseContent)
+                    // );
 
                     const response = responseContent;
 

@@ -150,8 +150,9 @@ export async function createAgentRuntime(
         character,
         providers: [
             Provider.timeProvider,
-            Provider.boredomProvider,
-            Provider.newsProvider
+            Provider.tokenProvider,
+            Provider.newsProvider,
+            Provider.tiktokProvider,
         ],
         actions: [
             // Default actions

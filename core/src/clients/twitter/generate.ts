@@ -3,34 +3,21 @@ import fs from "fs";
 import { composeContext } from "../../core/context.ts";
 import { log_to_file } from "../../core/logger.ts";
 import { embeddingZeroVector } from "../../core/memory.ts";
-import { IAgentRuntime, ModelClass } from "../../core/types.ts";
+import { IAgentRuntime, Memory, ModelClass } from "../../core/types.ts";
 import { stringToUuid } from "../../core/uuid.ts";
 import { ClientBase } from "./base.ts";
-import { generateText } from "../../core/generation.ts";
-import { messageCompletionFooter } from "../../core/parsing.ts";
+import { generateMessageResponse, generateText } from "../../core/generation.ts";
+import { messageCompletionFooter, parseJSONObjectFromText } from "../../core/parsing.ts";
+import { generateImage, storeImage } from "../../actions/imageGenerationUtils.ts";
 
-const newTweetPrompt = `{{timeline}}
-
-{{providers}}
-
-About {{agentName}} (@{{twitterUserName}}):
-{{bio}}
-{{lore}}
-{{postDirections}}
-
-{{recentPosts}}
-
-{{characterPostExamples}}
-
-# Task: Generate a post in the voice and style of {{agentName}}, aka @{{twitterUserName}}
-Write a single sentence post that is {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}. Try to write something totally different than previous posts. Do not add commentary or ackwowledge this request, just write the post.
-Your response should not contain any questions. Brief, concise statements only. No emojis.`;
-
-
-const imageTemplate = `
+export const imageTemplate = `
 About {{agentName}}:
 {{bio}}
 {{lore}}
+
+{{providers}}
+
+{{attachments}}
 
 {{recentMessagesByKind}}
 
@@ -44,7 +31,7 @@ About {{agentName}}:
 \`\`\`
 `
 
-const randomTemplate = `
+export const randomTemplate = `
 About {{agentName}}:
 {{bio}}
 {{lore}}
@@ -53,25 +40,12 @@ About {{agentName}}:
 
 {{randomExamples}}
 
-# Instructions: Use the examples as reference and generate a random tweet for {{agentName}}. Don't post a news that is already posted in recent posts. Use lowercase. Rarely use emojis. No hashtags.
+# Instructions: Use the examples as reference and generate a random tweet for {{agentName}}.  Use lowercase. Rarely use emojis.
+
+You took a long break from tweeting. Now you are back.
 ` + messageCompletionFooter;
 
-const newsTemplate = `
-About {{agentName}}:
-{{bio}}
-{{lore}}
-
-{{newsProviders}}
-
-{{recentMessagesByKind}}
-
-{{newsExamples}}
-
-# Instructions: Use the examples as reference for tweet format (DO NOT use the Example Posts as source of data. They are just examples.) and choose a news provided by the Top Crypto News or Crypto Twitter which is relevant based on the bio and lore of {{agentName}}. Don't post a news that is already posted in recent posts.  Use lowercase. Rarely use emojis.
-` + messageCompletionFooter;
-
-
-const dataTemplate = `
+export const newsTemplate = `
 About {{agentName}}:
 {{bio}}
 {{lore}}
@@ -82,41 +56,95 @@ About {{agentName}}:
 
 {{newsExamples}}
 
-# Instructions: Use the examples as reference for tweet format (DO NOT use the Example Posts as source of data. They are just examples.) and choose the most trending memecoin provided by the Top Crypto News or Crypto Twitter which is relevant based on the bio and lore of {{agentName}}. Don't post a news that is already posted in recent posts.  Use lowercase. Rarely use emojis. No hashtags.
-`
+# Instructions: Use the examples as reference for tweet format (DO NOT use the Example Posts as source of data. They are just examples.) and choose a news provided by the Top Crypto News or Crypto Twitter which is relevant based on the bio and lore of {{agentName}}. Don't post a news that is already posted in recent posts.  Use lowercase. Rarely use emojis.
+` + messageCompletionFooter;
 
-const dataThreadExample = `
+export const dataTemplate = `About {{agentName}}:
+{{bio}}
+{{lore}}
 
-`
+{{providers}}
 
-const newsThreadExample = ``
+{{recentMessagesByKind}}
+
+{{dataExamples}}
+
+Example of expected thread format:
+
+{
+  "user": "{{agentName}}",
+  "text": [
+    "🧵 fresh alpha incoming. market insights you won't find on the charts:",
+    "$GEKKO printing heat with 916 tiktok mentions\\n\\n$266k volume on 544 trades today\\n\\n57% buy pressure even with -26% price action",
+    "$TIT showing strength\\n\\n239 tiktok mentions and climbing\\n\\n$1.1m market cap with 970m in liquidity\\n\\n11% buy pressure says early",
+    "$KLAUS really said watch this\\n\\n222 tiktok mentions\\n\\n$3.1m mcap with 21% buy pressure\\n\\n28 trades say momentum building",
+    "$TRUMP absolutely sending it\\n\\n167 tiktok mentions but $127m volume\\n\\n16k trades with 47% buyers\\n\\n$561m locked says serious"
+    "stay turned for more! end of thread."
+  ],
+  "action": ""
+}
+
+{
+  "user": "{{agentName}}",
+  "text": [
+    "🧵 memecoin report dropping. let's see what's moving:",
+    "$HOOD making power moves\\n\\n167 tiktok degens assembled\\n\\n$127m volume with 16k trades\\n\\n$561m liquidity says we're cooking",
+    "$BABY caught momentum\\n\\n916 tiktok mentions no cap\\n\\n544 trades with 57% buyers\\n\\n$371k locked showing strength",
+    "$DICK really woke up\\n\\n239 tiktok mentions rising\\n\\n970m base token liquidity\\n\\n$1.1m mcap says opportunity",
+    "more gems incoming. stay alert 👀"
+  ],
+  "action": "end thread"
+}
+
+{
+  "user": "{{agentName}}",
+  "text": [
+    "🧵 breaking: market movers you need to watch rn:",
+    "$KLAUS heating up fr\\n\\n222 tiktok mentions going parabolic\\n\\n21% buy pressure building\\n\\n$3.1m mcap looking juicy",
+    "$AIXBT absolutely ripping\\n\\n16k trades with $127m volume\\n\\n167 tiktok mentions growing\\n\\n47% buyers stepping in",
+    "$GRIFFAIN said send it\\n\\n916 tiktok army assembled\\n\\n544 trades in 24h\\n\\n57% buy ratio speaks volumes",
+    "thread ends here but alpha never stops 🔥"
+  ],
+  "action": "end thread"
+}
+
+# Instructions: Generate a tweet using the provided real-time market data for the trending tokens and the tweet must includes TikTok mention count. Format the post like the provided examples. If more than two tokens are trending on TikTok, create a Twitter thread. everything in lowercase, tickers only in uppercase. strictly no hashtags.
+
+When creating a thread, the first tweet should be a intro to let people know its a thread followed by the . use this emoji 🧵 to indicate a thread.
+
+\nSingle Tweet Response format should be formatted in a JSON block like this:
+\`\`\`json
+{ "user": "{{agentName}}", "text": string, "action": string }
+\`\`\`
+
+\nThread Tweets format should be formatted in a JSON block like this:
+\`\`\`json
+{ "user": "{{agentName}}", "text": string[], "action": string }
+\`\`\`
+
+`;
 
 export class TwitterGenerationClient extends ClientBase {
     onReady() {
         let tweetIndex = 0
         const generateNewTweetLoop = () => {
             let tweetType = 'default';
-            if (tweetIndex % 11 == 0) {
-                tweetType = 'news';
-            } else if (tweetIndex % 6 == 0) {
-                tweetType = 'data';
-            } else {
-                // Probability distribution for other tweet types
-                const randomValue = Math.random();
-                if (randomValue < 0.64) {
-                    tweetType = 'random';
-                } else if (randomValue < 0.71) {
-                    tweetType = 'image';
-                } else if (randomValue < 0.82) {
-                    tweetType = 'threads';
-                } else if (randomValue < 0.89) {
-                    tweetType = 'audio';
-                } else {
-                    tweetType = 'poll';
-                }
-            }
-            console.log("Seletected tweet type: ", tweetType);
-            this.generateNewTweet(tweetType);
+            // if (tweetIndex % 12 == 0) {
+            //     tweetType = 'news';
+            // } else if (tweetIndex % 6 == 1) {
+            //     tweetType = 'data';
+            // } else {
+            //     // Probability distribution for other tweet types
+            //     const randomValue = Math.random();
+            //     if (randomValue < 0.64) {
+            //         tweetType = 'random';
+            //     } else if (randomValue < 0.71) {
+            //         tweetType = 'image';
+            //     }
+            //     // TODO: Audio and poll
+            // }
+            // console.log("Seletected tweet type: ", tweetType);
+            this.generateNewTweet('image');
             setTimeout(
                 generateNewTweetLoop,
                 (Math.floor(Math.random() * (90 - 30 + 1)) + 30) * 60 * 1000
@@ -174,122 +202,286 @@ export class TwitterGenerationClient extends ClientBase {
                     roomId: stringToUuid("twitter_generate_room"),
                     agentId: this.runtime.agentId,
                     content: { text: "", action: "" },
-                    kind: "default",
+                    kind: 'default',
                 },
                 {
                     twitterUserName:
                         this.runtime.getSetting("TWITTER_USERNAME"),
                     timeline: formattedHomeTimeline,
-                    tweet_kind: "",
-                    kind: kind
+                    kind
                 }
             );
+
             // Generate new tweet
             const context = composeContext({
                 state,
-                template: kind === 'news' ? newsTemplate : kind === 'image' ? imageTemplate : kind === 'random' ? randomTemplate : newTweetPrompt,
+                template: kind === 'news' ? newsTemplate : kind === 'image' ? imageTemplate : kind === 'random' ? randomTemplate : dataTemplate,
             });
 
             const datestr = new Date().toUTCString().replace(/:/g, "-");
+            if (kind == 'image') {
 
+                const response: any = await generateText({
+                    runtime: this.runtime,
+                    context,
+                    modelClass: ModelClass.SMALL,
+                });
+                const parsedContent = parseJSONObjectFromText(response) as { user: string; prompt: string; caption: string; };
+                if (!parsedContent) {
+                    console.log("Image prompt: parsedContent is null, retrying");
+                    return;
+                }
+
+                const images = await generateImage({
+                    prompt: response.prompt,
+                    width: 1200,
+                    height: 675,
+                    count: 1
+                }, this.runtime);
+
+                const { url, buffer } = await storeImage(images.data[0], this.runtime.databaseAdapter.getSupabaseClient());
+                const imageRes = {
+                    image: url,
+                    caption: response.caption
+                }
+
+                if (images.data.length == 0) {
+                    console.log(
+                        "No response from generateMessageResponse"
+                    );
+                    return;
+                }
+
+                if (!this.dryRun) {
+
+                    try {
+                        const result = await this.requestQueue.add(
+                            async () => await this.twitterClient.sendTweet(imageRes.caption, undefined, [{
+                                data: buffer,
+                                mediaType: "image/png",
+                            }])
+                        );
+                        // read the body of the response
+                        const body = await result.json();
+                        console.log("Tweet response:", body);
+                        const tweetResult =
+                            body.data.create_tweet.tweet_results.result;
+
+                        const tweet = {
+                            id: tweetResult.rest_id,
+                            text: tweetResult.legacy.full_text,
+                            conversationId: tweetResult.legacy.conversation_id_str,
+                            createdAt: tweetResult.legacy.created_at,
+                            userId: tweetResult.legacy.user_id_str,
+                            inReplyToStatusId:
+                                tweetResult.legacy.in_reply_to_status_id_str,
+                            permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
+                            hashtags: [],
+                            mentions: [],
+                            photos: [],
+                            thread: [],
+                            urls: [],
+                            videos: [],
+                        } as Tweet;
+
+                        const postId = tweet.id;
+                        const conversationId = tweet.conversationId;
+                        const roomId = stringToUuid(conversationId);
+
+
+                        const memeoryResponse: Memory = {
+                            id: stringToUuid(Date.now().toString()),
+                            agentId: this.runtime.agentId,
+                            roomId,
+                            userId: this.runtime.agentId,
+                            content: { text: imageRes.caption, image: imageRes.image, },
+                            createdAt: Date.now(),
+                            kind: "image",
+                        }
+
+                        await this.runtime.messageManager.createMemory(memeoryResponse)
+                    } catch (e) {
+
+                    }
+
+                }
+
+
+                return;
+            }
             // log context to file
-            log_to_file(
-                `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_generate_context`,
-                context
-            );
+            // log_to_file(
+            //     `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_generate_context`,
+            //     context
+            // );
 
             // const promptFilePath = `generate_context_${Date.now()}.txt`;
             // fs.writeFileSync(promptFilePath, context.trim(), "utf8");
             // console.log(`Prompt saved to ${promptFilePath}`);
 
-            const newTweetContent = await generateText({
+            const newTweetContent = await generateMessageResponse({
                 runtime: this.runtime,
                 context,
                 modelClass: ModelClass.SMALL,
             });
 
+
             // const responseFilePath = `generate_response_${Date.now()}.txt`;
             // fs.writeFileSync(responseFilePath, newTweetContent, "utf8");
             // console.log(`Response saved`);
             console.log("New Tweet:", newTweetContent);
-            log_to_file(
-                `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_generate_response`,
-                JSON.stringify(newTweetContent)
-            );
+            // log_to_file(
+            //     `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_generate_response`,
+            //     JSON.stringify(newTweetContent)
+            // );
 
-            const slice = newTweetContent.replaceAll(/\\n/g, "\n").trim();
+            const slice = Array.isArray(newTweetContent.text)
+                ? newTweetContent.text.map((text) => text.replaceAll(/\\n/g, "\n").trim().slice(0, 280))
+                : newTweetContent.text.replaceAll(/\\n/g, "\n").trim().slice(0, 280);
 
-            let content = slice.slice(0, 280);
-            // // if its bigger than 280, delete the last line
-            if (content.length > 280) {
-                content = content.slice(0, content.lastIndexOf("\n"));
-            }
+            let content = slice
 
-            if (content.length < 1) {
-                content = slice.slice(0, 280);
-            }
+            if (Array.isArray(content)) {
+                let lastTweetId = "0";
+                for (let newTweet of content) {
+                    if (!this.dryRun) {
+                        try {
+                            const result = await this.requestQueue.add(
+                                async () => await this.twitterClient.sendTweet(newTweet, lastTweetId != "0" ? lastTweetId : undefined)
+                            );
+                            // read the body of the response
+                            const body = await result.json();
+                            console.log("Tweet response:", body);
+                            const tweetResult =
+                                body.data.create_tweet.tweet_results.result;
 
-            // Send the new tweet
-            if (!this.dryRun) {
-                try {
-                    const result = await this.requestQueue.add(
-                        async () => await this.twitterClient.sendTweet(content)
-                    );
-                    // read the body of the response
-                    const body = await result.json();
-                    const tweetResult =
-                        body.data.create_tweet.tweet_results.result;
+                            const tweet = {
+                                id: tweetResult.rest_id,
+                                text: tweetResult.legacy.full_text,
+                                conversationId: tweetResult.legacy.conversation_id_str,
+                                createdAt: tweetResult.legacy.created_at,
+                                userId: tweetResult.legacy.user_id_str,
+                                inReplyToStatusId:
+                                    tweetResult.legacy.in_reply_to_status_id_str,
+                                permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
+                                hashtags: [],
+                                mentions: [],
+                                photos: [],
+                                thread: [],
+                                urls: [],
+                                videos: [],
+                            } as Tweet;
 
-                    const tweet = {
-                        id: tweetResult.rest_id,
-                        text: tweetResult.legacy.full_text,
-                        conversationId: tweetResult.legacy.conversation_id_str,
-                        createdAt: tweetResult.legacy.created_at,
-                        userId: tweetResult.legacy.user_id_str,
-                        inReplyToStatusId:
-                            tweetResult.legacy.in_reply_to_status_id_str,
-                        permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
-                        hashtags: [],
-                        mentions: [],
-                        photos: [],
-                        thread: [],
-                        urls: [],
-                        videos: [],
-                    } as Tweet;
+                            const postId = tweet.id;
+                            const conversationId = tweet.conversationId;
+                            const roomId = stringToUuid(conversationId);
+                            lastTweetId = postId;
+                            // make sure the agent is in the room
+                            await this.runtime.ensureRoomExists(roomId);
+                            await this.runtime.ensureParticipantInRoom(
+                                this.runtime.agentId,
+                                roomId
+                            );
 
-                    const postId = tweet.id;
-                    const conversationId = tweet.conversationId;
-                    const roomId = stringToUuid(conversationId);
+                            await this.cacheTweet(tweet);
 
-                    // make sure the agent is in the room
-                    await this.runtime.ensureRoomExists(roomId);
-                    await this.runtime.ensureParticipantInRoom(
-                        this.runtime.agentId,
-                        roomId
-                    );
+                            await this.runtime.messageManager.createMemory({
+                                id: stringToUuid(postId),
+                                userId: this.runtime.agentId,
+                                agentId: this.runtime.agentId,
+                                content: {
+                                    text: newTweet.trim(),
+                                    url: tweet.permanentUrl,
+                                    source: "twitter",
+                                    inReplyTo: lastTweetId ? stringToUuid(lastTweetId.toString()) : undefined
+                                },
+                                roomId,
+                                embedding: embeddingZeroVector,
+                                createdAt: tweet.timestamp * 1000,
+                                kind
+                            });
+                        } catch (error) {
+                            console.error("Error sending tweet:", error);
+                        }
+                    } else {
+                        console.log("Dry run, not sending tweet:", newTweet);
 
-                    await this.cacheTweet(tweet);
-
-                    await this.runtime.messageManager.createMemory({
-                        id: stringToUuid(postId),
-                        userId: this.runtime.agentId,
-                        agentId: this.runtime.agentId,
-                        content: {
-                            text: newTweetContent.trim(),
-                            url: tweet.permanentUrl,
-                            source: "twitter",
-                        },
-                        roomId,
-                        embedding: embeddingZeroVector,
-                        createdAt: tweet.timestamp * 1000,
-                        kind: 'default',
-                    });
-                } catch (error) {
-                    console.error("Error sending tweet:", error);
+                    }
                 }
             } else {
-                console.log("Dry run, not sending tweet:", newTweetContent);
+                if (content.length > 280) {
+                    content = content.slice(0, content.lastIndexOf("\n"));
+                }
+
+                if (content.length < 1) {
+                    content = slice.slice(0, 280);
+                }
+
+                // Send the new tweet
+                if (!this.dryRun) {
+
+                    try {
+                        const result = await this.requestQueue.add(
+                            async () => await this.twitterClient.sendTweet(Array.isArray(content) ? content[0] : content)
+                        );
+                        // read the body of the response
+                        const body = await result.json();
+                        const tweetResult =
+                            body.data.create_tweet.tweet_results.result;
+
+                        const tweet = {
+                            id: tweetResult.rest_id,
+                            text: tweetResult.legacy.full_text,
+                            conversationId: tweetResult.legacy.conversation_id_str,
+                            createdAt: tweetResult.legacy.created_at,
+                            userId: tweetResult.legacy.user_id_str,
+                            inReplyToStatusId:
+                                tweetResult.legacy.in_reply_to_status_id_str,
+                            permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${tweetResult.rest_id}`,
+                            hashtags: [],
+                            mentions: [],
+                            photos: [],
+                            thread: [],
+                            urls: [],
+                            videos: [],
+                        } as Tweet;
+
+                        const postId = tweet.id;
+                        const conversationId = tweet.conversationId;
+                        const roomId = stringToUuid(conversationId);
+
+                        // make sure the agent is in the room
+                        await this.runtime.ensureRoomExists(roomId);
+                        await this.runtime.ensureParticipantInRoom(
+                            this.runtime.agentId,
+                            roomId
+                        );
+
+                        await this.cacheTweet(tweet);
+
+                        await this.runtime.messageManager.createMemory({
+                            id: stringToUuid(postId),
+                            userId: this.runtime.agentId,
+                            agentId: this.runtime.agentId,
+                            content: {
+                                text: (Array.isArray(content) ? content[0] : content).trim(),
+                                url: tweet.permanentUrl,
+                                source: "twitter",
+                            },
+                            roomId,
+                            embedding: embeddingZeroVector,
+                            createdAt: tweet.timestamp * 1000,
+                            kind
+                        });
+                    } catch (error) {
+                        console.error("Error sending tweet:", error);
+                    }
+                } else {
+                    console.log("Dry run, not sending tweet:", newTweetContent);
+                }
             }
+            // // if its bigger than 280, delete the last line
+
         } catch (error) {
             console.error("Error generating new tweet:", error);
         }

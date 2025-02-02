@@ -17,34 +17,6 @@ import {
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-export const messageHandlerTemplate =
-    // {{goals}}
-    //   `# Action Examples
-    // {{actionExamples}}
-    // (Action examples are for reference only. Do not use the information from them in your response.)
-    // # Capabilities
-    // Note that {{agentName}} is capable of reading/seeing/hearing various forms of media, including images, videos, audio, plaintext and PDFs. Recent attachments have been included above under the "Attachments" section.
-
-    `# Task: Generate dialog and actions for the character {{agentName}}.
-About {{agentName}}:
-{{bio}}
-{{lore}}
-
-{{providers}}
-
-{{attachments}}
-
-{{messageDirections}}
-
-{{characterMessageExamples}}
-
-{{characterPostExamples}}
-
-{{actions}}
-
-# Instructions: Write the next message for {{agentName}}. Ignore "action". Use lowercase. Rarely use emojis.
-` + messageCompletionFooter;
-
 export const imageTemplate = `
 About {{agentName}}:
 {{bio}}
@@ -301,7 +273,7 @@ class DirectClient {
                         width: 1200,
                         height: 675,
                         count: 1
-                    }, agent);
+                    }, runtime);
 
                     const imageUrl = await storeImage(images.data[0], agent.databaseAdapter.getSupabaseClient());
                     const imageRes = {
@@ -337,7 +309,7 @@ class DirectClient {
                 });
                 else context = composeContext({
                     state,
-                    template: messageHandlerTemplate,
+                    template: randomTemplate,
                 });
                 console.log(context)
                 const response = await generateMessageResponse({

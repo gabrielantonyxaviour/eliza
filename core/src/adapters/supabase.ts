@@ -112,7 +112,7 @@ export class SupabaseDatabaseAdapter extends DatabaseAdapter {
         }
     }
 
-    async getMentionsByTickerOrAddress(ticker: string): Promise<number> {
+    async getMentionsByTicker(ticker: string): Promise<number> {
         try {
             const { data, error } = await this.supabase
                 .rpc('get_mentions_by_ticker', {
