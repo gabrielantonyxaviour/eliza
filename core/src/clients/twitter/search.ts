@@ -19,32 +19,7 @@ import { ClientBase } from "./base.ts";
 import { buildConversationThread, likeTweet, retweet, sendQuoteTweetChunks, sendTweetChunks, wait } from "./utils.ts";
 import { TikTokProvider } from "../../providers/tiktok.ts";
 
-const messageHandlerTemplate =
-    `{{relevantFacts}}
-{{recentFacts}}
 
-{{timeline}}
-
-{{providers}}
-
-**Message Response examples**
-{{characterMessageExamples}}
-
-About {{agentName}} (@{{twitterUserName}}):
-{{bio}}
-{{lore}}
-{{topics}}
-
-
-# Task: Respond to the following post in the style and perspective of {{agentName}} (aka @{{twitterUserName}}). Write a {{adjective}} response for {{agentName}} to say directly in response to the post. don't generalize.
-{{currentPost}}
-
-IMPORTANT: Your response CANNOT be longer than 20 words.
-Aim for 1-2 short sentences maximum. Be concise and direct.
-
-Your response should not contain any questions. Brief, concise statements only. No emojis. Use \\n\\n (double spaces) between statements.
-
-` + messageCompletionFooter;
 
 const replyHandlerTemplate =
     `
@@ -178,6 +153,8 @@ About ${this.runtime.character.name}:
 ${Array.isArray(this.runtime.character.bio) ? this.runtime.character.bio.join("\n") : this.runtime.character.bio}\n
 ${Array.isArray(this.runtime.character.lore) ? this.runtime.character.lore.join("\n") : this.runtime.character.lore}
 
+# Instruction: You need to decide one of the 5 actions for each tweet you come across in your feed.
+
 Action Guidelines:
 - REPLY: Choose when you can add value to the conversation or have a meaningful exchange
 - QUOTE: Use when you want to add commentary while sharing the tweet with your followers
@@ -234,7 +211,7 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
                     console.log("No matching tweet found for the selected ID");
                     continue;
                 }
-                console.log("Selected tweet to reply to:", selectedTweet.text);
+                console.log("Selected tweet: ", selectedTweet.text);
                 if (selectedTweet.username === this.runtime.getSetting("TWITTER_USERNAME")) {
                     console.log("Skipping tweet from bot itself");
                     continue;
@@ -309,7 +286,6 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
                     let tokenProviderData: string = ''
                     const tiktokProvider = new TikTokProvider(this.runtime)
                     // Identify ticker
-                    selectedTweet.text
                     const tickerMentions = selectedTweet.text.match(/\$[A-Za-z0-9]+/g) || [];
                     const addressMentions = selectedTweet.text.match(/(?:0x[a-fA-F0-9]{40}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})/g) || [];
                     const mentions = [...tickerMentions, ...addressMentions];
@@ -320,7 +296,6 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
                         twitterUserName: this.runtime.getSetting("TWITTER_USERNAME"),
                         timeline: formattedHomeTimeline,
                         tweetContext: `${tweetBackground}
-          
           Original Post:
           By @${selectedTweet.username}
           ${selectedTweet.text}${replyContext.length > 0 && `\nReplies to original post:\n${replyContext}`}
