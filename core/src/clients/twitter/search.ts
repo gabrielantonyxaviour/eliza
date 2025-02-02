@@ -229,6 +229,11 @@ Please analyze each tweet and return ONLY ONE action per tweet in the specified 
                     const roomId = stringToUuid(conversationId);
 
                     const userIdUUID = stringToUuid(selectedTweet.userId as string);
+                    console.log({
+                        userIdUUID,
+                        roomId,
+                        selectedTweet
+                    })
                     await this.runtime.ensureConnection(
                         userIdUUID,
                         roomId,

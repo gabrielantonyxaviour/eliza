@@ -40,6 +40,8 @@ const defaultCharacter: Character = {
     "randomMessageExamples": [],
     "newsExamples": [],
     "randomExamples": [],
+    pollExamples: [],
+    tokenExamples: [],
     "dataExamples": [],
     "imageExamples": [
         "Digital art of a muscular charging bull made of glowing green cryptocurrency symbols, bursting through a wall of red candles, dramatic lighting, cyber punk style, detailed 3D rendering",

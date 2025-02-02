@@ -807,7 +807,25 @@ Text: ${attachment.text}
                 const messageString = `${post}`;
                 return messageString;
             })
-            .slice(0, 50)
+            .slice(0, 20)
+            .join("\n");
+
+        const formattedTokenExamples = this.character.tokenExamples
+            .sort(() => 0.5 - Math.random())
+            .map((post) => {
+                const messageString = `${post}`;
+                return messageString;
+            })
+            .slice(0, 20)
+            .join("\n");
+
+        const formattedPollExamples = this.character.pollExamples
+            .sort(() => 0.5 - Math.random())
+            .map((poll) => {
+                const messageString = `Question: ${poll.question}\nOptions: ${poll.options.join(", ")}`;
+                return messageString;
+            })
+            .slice(0, 6)
             .join("\n");
 
         const formattedImageExamples = this.character.imageExamples.sort(() => 0.5 - Math.random()).map((post) => {
@@ -1079,7 +1097,20 @@ Text: ${attachment.text}
                         formattedNewsExamples
                     )
                     : "",
-
+            pollExamples: formattedPollExamples &&
+                formattedPollExamples.replaceAll("\n", "").length > 0
+                ? addHeader(
+                    `# Example Polls for ${this.character.name}`,
+                    formattedPollExamples
+                )
+                : "",
+            tokenExamples:
+                formattedTokenExamples &&
+                    formattedTokenExamples.replaceAll("\n", "").length > 0
+                    ? addHeader(
+                        `# Example Posts for ${this.character.name}`,
+                        formattedTokenExamples
+                    ) : "",
             imageExamples: formattedImageExamples &&
                 formattedImageExamples.replaceAll("\n", "").length >
                 0
@@ -1221,7 +1252,7 @@ Text: ${attachment.text}
             await Promise.all([
                 Promise.all(evaluatorPromises),
                 Promise.all(actionPromises),
-                kind == 'data' ? getProvidersByIndex(this, message, [0, 3], initialState) : kind == 'news' ? getProvidersByIndex(this, message, [0, 2], initialState) : kind == 'token' ? getProvidersByIndex(this, message, [0, 1], initialState) : ''
+                kind == 'data' ? getProvidersByIndex(this, message, [0, 3], initialState) : kind == 'news' || kind == 'poll' ? getProvidersByIndex(this, message, [0, 2], initialState) : kind == 'token' ? getProvidersByIndex(this, message, [0, 1], initialState) : ''
             ]);
         const evaluatorsData = resolvedEvaluators.filter(
             Boolean

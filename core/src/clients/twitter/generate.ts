@@ -9,6 +9,7 @@ import { ClientBase } from "./base.ts";
 import { generateMessageResponse, generateText } from "../../core/generation.ts";
 import { messageCompletionFooter, parseJSONObjectFromText } from "../../core/parsing.ts";
 import { generateImage, storeImage } from "../../actions/imageGenerationUtils.ts";
+import { token } from "@coral-xyz/anchor/dist/cjs/utils/index";
 
 export const imageTemplate = `
 About {{agentName}}:
@@ -124,27 +125,67 @@ When creating a thread, the first tweet should be a intro to let people know its
 
 `;
 
+export const tokenTemplate = `About {{agentName}}:
+{{bio}}
+{{lore}}
+
+{{providers}}
+
+{{recentMessagesByKind}}
+
+{{tokenExamples}}
+
+# Instructions: Generate a tweet using the provided real-time market data of the shared tokens. Format the post like the provided examples. everything in lowercase, tickers only in uppercase. strictly no hashtags.
+
+Remember that $ZOROX is your token.
+
+\nSingle Tweet Response format should be formatted in a JSON block like this:
+\`\`\`json
+{ "user": "{{agentName}}", "text": string, "action": string }
+\`\`\`
+`
+
+export const pollTemplate = `About {{agentName}}:
+{{bio}}
+{{lore}}
+
+{{providers}}
+
+{{recentMessagesByKind}}
+
+{{pollExamples}}
+
+# Instructions: Generate a poll about anything related to Crypto, memecoins and TikTok. Format the post like the provided examples. everything in lowercase, tickers only in uppercase. strictly no hashtags.
+
+\nSingle Tweet Response format should be formatted in a JSON block like this:
+\`\`\`json
+{ "user": "{{agentName}}", "question": string, "options": string[] }
+\`\`\``
+
+export const videoTemplate = ``
+
 export class TwitterGenerationClient extends ClientBase {
     onReady() {
         let tweetIndex = 0
         const generateNewTweetLoop = () => {
-            let tweetType = 'default';
-            // if (tweetIndex % 12 == 0) {
-            //     tweetType = 'news';
-            // } else if (tweetIndex % 6 == 1) {
-            //     tweetType = 'data';
-            // } else {
-            //     // Probability distribution for other tweet types
-            //     const randomValue = Math.random();
-            //     if (randomValue < 0.64) {
-            //         tweetType = 'random';
-            //     } else if (randomValue < 0.71) {
-            //         tweetType = 'image';
-            //     }
-            //     // TODO: Audio and poll
-            // }
-            // console.log("Seletected tweet type: ", tweetType);
-            this.generateNewTweet('image');
+            let tweetType = 'random';
+            if (tweetIndex % 12 == 0) {
+                tweetType = 'news';
+            } else if (tweetIndex % 6 == 1) {
+                tweetType = 'data';
+            } else {
+                const randomValue = Math.random();
+                if (randomValue < 0.75) {
+                    tweetType = 'random';
+                } else if (randomValue < 0.85) {
+                    tweetType = 'image';
+                } else {
+                    tweetType = 'poll';
+                }
+                // TODO: Audio 
+            }
+            console.log("Seletected tweet type: ", tweetType);
+            this.generateNewTweet('poll');
             setTimeout(
                 generateNewTweetLoop,
                 (Math.floor(Math.random() * (90 - 30 + 1)) + 30) * 60 * 1000
@@ -215,7 +256,7 @@ export class TwitterGenerationClient extends ClientBase {
             // Generate new tweet
             const context = composeContext({
                 state,
-                template: kind === 'news' ? newsTemplate : kind === 'image' ? imageTemplate : kind === 'random' ? randomTemplate : dataTemplate,
+                template: kind === 'news' ? newsTemplate : kind === 'image' ? imageTemplate : kind === 'random' ? randomTemplate : kind == 'data' ? dataTemplate : kind == 'poll' ? pollTemplate : tokenTemplate,
             });
 
             const datestr = new Date().toUTCString().replace(/:/g, "-");
@@ -233,7 +274,7 @@ export class TwitterGenerationClient extends ClientBase {
                 }
 
                 const images = await generateImage({
-                    prompt: response.prompt,
+                    prompt: parsedContent.prompt,
                     width: 1200,
                     height: 675,
                     count: 1
@@ -242,7 +283,7 @@ export class TwitterGenerationClient extends ClientBase {
                 const { url, buffer } = await storeImage(images.data[0], this.runtime.databaseAdapter.getSupabaseClient());
                 const imageRes = {
                     image: url,
-                    caption: response.caption
+                    caption: parsedContent.caption
                 }
 
                 if (images.data.length == 0) {
@@ -287,7 +328,13 @@ export class TwitterGenerationClient extends ClientBase {
                         const postId = tweet.id;
                         const conversationId = tweet.conversationId;
                         const roomId = stringToUuid(conversationId);
+                        await this.runtime.ensureRoomExists(roomId);
+                        await this.runtime.ensureParticipantInRoom(
+                            this.runtime.agentId,
+                            roomId
+                        );
 
+                        await this.cacheTweet(tweet);
 
                         const memeoryResponse: Memory = {
                             id: stringToUuid(Date.now().toString()),
@@ -309,6 +356,91 @@ export class TwitterGenerationClient extends ClientBase {
 
                 return;
             }
+            if (kind == 'poll') {
+                const response: any = await generateText({
+                    runtime: this.runtime,
+                    context,
+                    modelClass: ModelClass.SMALL,
+                });
+                console.log(response)
+                const parsedContent = parseJSONObjectFromText(response) as { user: string; question: string; options: string[]; };
+                if (!parsedContent) {
+                    console.log("Poll generation: parsedContent is null, retrying");
+                    return;
+                }
+
+
+                if (!this.dryRun) {
+
+                    try {
+                        const result = await this.twitterClient.sendTweetV2(parsedContent.question, undefined, {
+                            poll: {
+                                options: [...parsedContent.options.map((option) => {
+                                    return {
+                                        position: parsedContent.options.indexOf(option),
+                                        label: option
+                                    }
+                                })],
+                                duration_minutes: 1440
+                            }
+                        })
+                        // read the body of the response
+                        console.log("Tweet response:", result);
+
+                        const tweet = {
+                            id: result.id,
+                            text: result.text,
+                            conversationId: result.conversationId,
+                            createdAt: result.timestamp,
+                            userId: result.userId,
+                            inReplyToStatusId:
+                                result.inReplyToStatusId,
+                            permanentUrl: `https://twitter.com/${this.runtime.getSetting("TWITTER_USERNAME")}/status/${result.id}`,
+                            hashtags: [],
+                            mentions: [],
+                            photos: [],
+                            thread: [],
+                            urls: [],
+                            videos: [],
+                        } as Tweet;
+
+                        const conversationId = tweet.conversationId;
+                        const roomId = stringToUuid(conversationId);
+                        await this.runtime.ensureRoomExists(roomId);
+                        await this.runtime.ensureParticipantInRoom(
+                            this.runtime.agentId,
+                            roomId
+                        );
+
+                        await this.cacheTweet(tweet);
+
+                        const memeoryResponse: Memory = {
+                            id: stringToUuid(Date.now().toString()),
+                            agentId: this.runtime.agentId,
+                            roomId,
+                            userId: this.runtime.agentId,
+                            content: {
+                                text: JSON.stringify({
+                                    question: parsedContent.question,
+                                    options: parsedContent.options
+                                }),
+                            },
+                            createdAt: Date.now(),
+                            kind: "poll",
+                        }
+
+                        await this.runtime.messageManager.createMemory(memeoryResponse)
+                    } catch (e) {
+
+                    }
+
+                }
+
+                return;
+            }
+
+
+
             // log context to file
             // log_to_file(
             //     `${this.runtime.getSetting("TWITTER_USERNAME")}_${datestr}_generate_context`,

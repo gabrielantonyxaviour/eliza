@@ -322,6 +322,8 @@ export type Character = {
     dataExamples: string[];
     newsExamples: string[];
     randomExamples: string[];
+    tokenExamples: string[];
+    pollExamples: { question: string; options: string[] }[];
     imageExamples: string[];
     newsThreadsExamples: string[][];
     people: string[];

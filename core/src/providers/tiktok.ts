@@ -165,8 +165,12 @@ class TikTokProvider {
         //     return cached;
         // }
 
-        console.log('Fetching aggregated mentions from the database');
-        const mentions = await this.getAggregatedMentions();
+        // console.log('Fetching aggregated mentions from the database');
+        // const mentions = await this.getAggregatedMentions();
+
+        console.log('Fetching trending mentions from the database');
+        const mentions = await this.getTrendingMentions();
+
         console.log('Fetching token data for each mention');
 
         const tokens: TikTokData[] = [];

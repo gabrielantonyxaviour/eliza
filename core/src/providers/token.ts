@@ -777,7 +777,7 @@ export class TokenProvider {
         if (data.highValueHolders.length === 0) {
             output += `- No high-value holders found or data not available.\n`;
         } else {
-            data.highValueHolders.forEach((holder) => {
+            data.highValueHolders.slice(0, 10).forEach((holder) => {
                 output += `- ${holder.holderAddress}: $${holder.balanceUsd}\n`;
             });
         }
