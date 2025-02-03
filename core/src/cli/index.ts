@@ -139,7 +139,7 @@ export async function createAgentRuntime(
     const actionConfigs = loadActionConfigs(configPath);
     const customActions = await loadCustomActions(actionConfigs);
 
-    console.log("Creating runtime for character", character.name);
+    console.log("Creating agent runtime for character", character.name);
 
     return new AgentRuntime({
         databaseAdapter: db,
@@ -180,7 +180,7 @@ export async function createDirectRuntime(
     const actionConfigs = loadActionConfigs(configPath);
     const customActions = await loadCustomActions(actionConfigs);
 
-    console.log("Creating runtime for character", character.name);
+    console.log("Creating direct runtime for character", character.name);
     return new AgentRuntime({
         databaseAdapter: db,
         token,

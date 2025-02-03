@@ -35,10 +35,10 @@ About {{agentName}}:
 {{exampleData}}
 
 IMPORTANT: Your response CANNOT be longer than 20 words.
-Aim for 1-2 short sentences maximum. Be concise and direct. only loqercase. rarely use emojis. no hashtags. Your response should not contain any questions. 
+Aim for 1-2 short sentences maximum. Be concise and direct. only lowercase. rarely use emojis. no hashtags. Your response should not contain any questions. 
 
 Use \\n\\n (double spaces) between statements ONLY IF token data is present.
-`
+`+ messageCompletionFooter;
 
 const quoteHandlerTemplate = `
 About {{agentName}}:
@@ -53,7 +53,7 @@ About {{agentName}}:
 {{exampleData}}
 
 IMPORTANT: Your response CANNOT be longer than 20 words.
-Aim for 1-2 short sentences maximum. Be concise and direct. only loqercase. rarely use emojis. no hashtags. Your response should not contain any questions. 
+Aim for 1-2 short sentences maximum. Be concise and direct. only lowercase. rarely use emojis. no hashtags. Your response should not contain any questions. 
 
 Use \\n\\n (double spaces) between statements ONLY IF token data is present.
 ` + messageCompletionFooter;

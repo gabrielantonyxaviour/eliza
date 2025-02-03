@@ -725,7 +725,8 @@ export class AgentRuntime implements IAgentRuntime {
             actors: actorsData,
         })
 
-
+        console.log("Recent Messages Data")
+        console.log(recentMessagesData)
         const recentPosts = formatPosts({
             messages: recentMessagesData,
             actors: actorsData,
