@@ -35,7 +35,7 @@ characters/
 
 cache/
 
-# search_context*
-# interactions_context*
-# search_response*
-# interactions_response*  
+search_context*
+interactions_context*
+search_response*
+interactions_response*  
